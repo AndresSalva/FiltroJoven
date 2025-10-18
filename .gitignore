@@ -1,0 +1,26 @@
+# Entornos virtuales
+venv/
+.venv/
+env/
+ENV/
+
+# Archivos de Python compilados
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Archivos de dependencias locales
+*.egg-info/
+*.eggs/
+dist/
+build/
+
+# Configuración del IDE
+.vscode/
+.idea/
+*.swp
+
+# Archivos temporales
+.DS_Store
+*.log

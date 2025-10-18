@@ -3,68 +3,67 @@
 import cv2
 import mediapipe as mp
 import numpy as np
-from typing import Optional, List, Dict
+from typing import List, Dict, Any
 
 class FaceDetector:
     """
-    Clase para detectar rostros y sus landmarks utilizando MediaPipe Face Mesh.
+    Una clase para detectar landmarks faciales en una imagen usando MediaPipe.
     """
-    def __init__(self,
-                 static_image_mode: bool = True, # Ideal para imágenes estáticas
-                 max_num_faces: int = 1,
-                 refine_landmarks: bool = True,
-                 min_detection_confidence: float = 0.5):
+    def __init__(self, static_image_mode: bool = True, max_num_faces: int = 1):
         """
         Inicializa el detector de rostros de MediaPipe.
 
         Args:
-            static_image_mode (bool): Si es True, trata las imágenes como un lote estático,
-                                      lo que es más preciso para cada imagen individual.
-            max_num_faces (int): Número máximo de rostros a detectar.
-            refine_landmarks (bool): Si es True, refina los landmarks alrededor de los ojos y la boca.
-            min_detection_confidence (float): Umbral de confianza para una detección de rostro.
+            static_image_mode (bool): Si es True, trata las imágenes como estáticas (mejor para fotos).
+            max_num_faces (int): El número máximo de rostros a detectar.
         """
-        self.mp_face_mesh = mp.solutions.face_mesh
-        self.face_mesh = self.mp_face_mesh.FaceMesh(
+        self.face_mesh = mp.solutions.face_mesh.FaceMesh(
             static_image_mode=static_image_mode,
             max_num_faces=max_num_faces,
-            refine_landmarks=refine_landmarks,
-            min_detection_confidence=min_detection_confidence
+            refine_landmarks=True,
+            min_detection_confidence=0.5
         )
 
-    def detect_faces(self, image: np.ndarray) -> Optional[List[Dict]]:
+    def detect_faces(self, image: np.ndarray) -> List[Dict[str, Any]]:
         """
-        Detecta rostros y extrae sus landmarks en una imagen dada.
+        Detecta rostros en una imagen y extrae sus landmarks.
 
         Args:
-            image (np.ndarray): La imagen (en formato BGR de OpenCV).
+            image (np.ndarray): La imagen en formato BGR (de OpenCV).
 
         Returns:
-            Optional[List[Dict]]: Una lista de diccionarios, uno por cada rostro detectado.
-                                  Cada diccionario contiene 'landmarks' en coordenadas de píxeles
-                                  y el objeto original de landmarks de MediaPipe.
-                                  Retorna None si no se detectan rostros.
+            List[Dict[str, Any]]: Una lista de diccionarios, donde cada uno representa un rostro detectado.
+                                  Contiene los landmarks normalizados y en píxeles.
         """
-        image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        results = self.face_mesh.process(image_rgb)
-
-        detected_faces_data = []
-
-        if results.multi_face_landmarks:
-            img_h, img_w, _ = image.shape
-            for face_landmarks in results.multi_face_landmarks:
-                landmarks_pixels = [{'x': int(lm.x * img_w), 'y': int(lm.y * img_h)} for lm in face_landmarks.landmark]
-                
-                detected_faces_data.append({
-                    'landmarks': landmarks_pixels,
-                    'mediapipe_landmarks_object': face_landmarks
-                })
-            return detected_faces_data
+        # Convierte la imagen de BGR a RGB, que es lo que MediaPipe espera
+        rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         
-        return None
+        # Procesa la imagen
+        results = self.face_mesh.process(rgb_image)
+
+        detected_faces = []
+        if not results.multi_face_landmarks:
+            return detected_faces
+
+        height, width, _ = image.shape
+        
+        for face_landmarks in results.multi_face_landmarks:
+            # Convierte los landmarks normalizados a coordenadas de píxeles
+            landmarks_px = np.array(
+                [(lm.x * width, lm.y * height) for lm in face_landmarks.landmark],
+                dtype=np.float32
+            )
+            
+            face_data = {
+                'landmarks': landmarks_px,
+                'mediapipe_landmarks_object': face_landmarks 
+            }
+            detected_faces.append(face_data)
+            
+        return detected_faces
 
     def close(self):
+        """
+        Libera los recursos del detector.
+        """
         self.face_mesh.close()
-
-    def __del__(self):
-        self.close()

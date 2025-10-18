@@ -1,57 +1,27 @@
 # main.py
-
-import os
-from core.face_detector import FaceDetector
+import os, sys, cv2
 from utils.image_utils import load_image, save_image
-from utils.display_utils import draw_landmarks_on_face, show_image
+from transformations.face_manipulator import make_younger
 
 def main():
-    # --- Configuración ---
     INPUT_DIR = "input_images"
     OUTPUT_DIR = "output_images"
-    IMAGE_FILENAME = "old_person.jpg"  # Cambia esto al nombre de tu imagen
-
-    # Construir rutas de archivo
-    input_path = os.path.join(INPUT_DIR, IMAGE_FILENAME)
-    output_path = os.path.join(OUTPUT_DIR, f"detected_{IMAGE_FILENAME}")
-
-    # Crear el directorio de salida si no existe
     os.makedirs(OUTPUT_DIR, exist_ok=True)
+    IMAGE_FILENAME = os.environ.get("FJ_IMAGE", "old_person.jpg")
+    iters = int(os.environ.get("FJ_GENS", "20"))
+    pop   = int(os.environ.get("FJ_POP", "24"))
 
-    # --- Procesamiento ---
-    face_detector = None
-    try:
-        # 1. Cargar la imagen
-        image = load_image(input_path)
-        if image is None:
-            return
+    input_path = os.path.join(INPUT_DIR, IMAGE_FILENAME)
+    output_path = os.path.join(OUTPUT_DIR, f"younger_{IMAGE_FILENAME}")
+    img = load_image(input_path)
+    if img is None:
+        print(f"No pude cargar la imagen: {input_path}")
+        sys.exit(1)
 
-        # 2. Inicializar el detector de rostros
-        #    Para imágenes estáticas, static_image_mode=True es mejor.
-        face_detector = FaceDetector(static_image_mode=True, max_num_faces=1)
-
-        # 3. Detectar rostros
-        print("Detectando rostro en la imagen...")
-        detected_faces = face_detector.detect_faces(image)
-
-        if detected_faces:
-            print(f"¡Rostro detectado! Se encontraron {len(detected_faces[0]['landmarks'])} landmarks.")
-            
-            # 4. Dibujar los landmarks en la imagen
-            face_data = detected_faces[0] # Tomamos el primer rostro detectado
-            annotated_image = draw_landmarks_on_face(image, face_data)
-
-            # 5. Guardar y mostrar el resultado
-            save_image(output_path, annotated_image)
-            show_image("Rostro Detectado con Landmarks", annotated_image)
-        else:
-            print("No se detectaron rostros en la imagen.")
-
-    except Exception as e:
-        print(f"Ocurrió un error inesperado: {e}")
-    finally:
-        if face_detector:
-            face_detector.close()
+    result, best = make_younger(img, iters=iters, pop_size=pop, save_debug=True)
+    save_image(output_path, result)
+    print("Mejores parámetros:", best["params"])
+    print("Salida:", output_path)
 
 if __name__ == "__main__":
     main()

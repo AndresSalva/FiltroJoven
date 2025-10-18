@@ -12,16 +12,9 @@ def main():
     # --- Configuración ---
     INPUT_DIR = "input_images"
     OUTPUT_DIR = "output_images"
-    IMAGE_FILENAME = "mayor.jpeg"  # Asegúrate de tener una imagen con este nombre aquí
+    IMAGE_FILENAME = "mayor.jpeg"  
 
-    # --- Configuración del Algoritmo Genético ---
-    # En main.py
-
-    # --- Configuración del Algoritmo Genético ---
-   # En main.py
-
-    # --- Configuración del Algoritmo Genético ---
-    # En main.py
+  
 
     # --- Configuración del Algoritmo Genético ---
     POPULATION_SIZE = 50
@@ -61,9 +54,7 @@ def main():
         original_landmarks = detected_faces[0]['landmarks']
         print(f"¡Rostro detectado! Se encontraron {len(original_landmarks)} landmarks.")
 
-        # Opcional: Dibuja y guarda los landmarks originales para comparar
-        # annotated_image = draw_landmarks_on_face(image, detected_faces[0])
-        # save_image(output_path_landmarks, annotated_image)
+        
 
         # 4. Ejecutar el algoritmo genético para encontrar los mejores landmarks "rejuvenecidos"
         ga = GeneticRejuvenator(

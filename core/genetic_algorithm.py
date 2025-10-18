@@ -33,14 +33,7 @@ class GeneticRejuvenator:
         # Cada individuo es un array de (num_landmarks, 2) con desplazamientos (dx, dy)
         return np.random.uniform(-1.0, 1.0, (self.population_size, self.num_landmarks, 2)) * self.mutation_strength
 
-    # Reemplaza la función entera en core/genetic_algorithm.py
-
-   # Reemplaza la función en core/genetic_algorithm.py
-
-    # Reemplaza la función en core/genetic_algorithm.py
-# Reemplaza la función en core/genetic_algorithm.py
-
-   # Reemplaza la función en core/genetic_algorithm.py
+    
 
     def _calculate_fitness(self, chromosome: np.ndarray) -> float:
         """
@@ -49,7 +42,6 @@ class GeneticRejuvenator:
         modified_landmarks = self.original_landmarks + chromosome
         fitness_score = 0.0
 
-        # --- Premios (Incentivos para el cambio) ---
 
         # Heurística 1: Levantar las cejas. Un lifting facial visible.
         original_eyebrow_y = np.mean(self.original_landmarks[LEFT_EYEBROW_UPPER + RIGHT_EYEBROW_UPPER, 1])
@@ -73,7 +65,6 @@ class GeneticRejuvenator:
 
         return max(0, fitness_score)
 
-    # Reemplaza la función _selection en core/genetic_algorithm.py
 
     def _selection(self, fitness_scores: np.ndarray):
         """
@@ -100,7 +91,6 @@ class GeneticRejuvenator:
         
         return parents
 
-# Reemplaza la función _crossover en core/genetic_algorithm.py
 
     def _crossover(self, parents: np.ndarray):
         """

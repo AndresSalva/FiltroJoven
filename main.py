@@ -5,7 +5,7 @@ from transformations.face_manipulator import make_younger
 
 def main():
     INPUT_DIR = "input_images"
-    OUTPUT_DIR = "output_images"
+    OUTPUT_DIR = "input_images"
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     IMAGE_FILENAME = os.environ.get("FJ_IMAGE", "old_person.jpg")
     iters = int(os.environ.get("FJ_GENS", "20"))

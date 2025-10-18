@@ -1,0 +1,23 @@
+# ENTORNO VIRTUAL
+venv/
+
+# ARCHIVOS PYTHON
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# EDITORES
+.vscode/
+.idea/
+
+# ARCHIVOS DE SISTEMA
+.DS_Store
+Thumbs.db
+
+# LOGS
+*.log
+
+# TENSORFLOW (archivos grandes)
+*.h5
+*.model

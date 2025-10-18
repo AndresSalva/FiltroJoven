@@ -2,82 +2,80 @@
 
 import cv2
 import numpy as np
-from scipy.spatial import Delaunay
+
+LEFT_EYE = [33, 160, 158, 133, 153, 144]
+RIGHT_EYE = [362, 385, 387, 263, 373, 380]
+LEFT_EYEBROW = [70, 63, 105, 66, 107]
+RIGHT_EYEBROW = [336, 296, 334, 293, 300]
+MOUTH = [61, 146, 91, 181, 84, 17, 314, 405, 321, 375, 291]
 
 def warp_face(image: np.ndarray, src_landmarks: np.ndarray, dst_landmarks: np.ndarray) -> np.ndarray:
     """
-    Rejuvenece el rostro aplicando un suavizado de piel y luego una deformación guiada.
-    
-    Args:
-        image (np.ndarray): La imagen original.
-        src_landmarks (np.ndarray): Los landmarks originales detectados en la imagen.
-        dst_landmarks (np.ndarray): Los landmarks "rejuvenecidos" calculados por el AG.
-
-    Returns:
-        np.ndarray: La imagen con el rostro rejuvenecido.
+    Combina el suavizado, la deformación y la restauración de detalles, usando
+    seamlessClone para una integración fotorrealista final.
     """
     
-    # --- Etapa 1: Suavizado Inteligente de la Piel (Reducción de Arrugas) ---
+    # --- Etapa 1: Composición de la Cara Rejuvenecida de Alta Calidad ---
+    # (Esta parte es la del código anterior que funcionaba bien)
+
+    original_details_layer = image.copy()
+    smoothed_skin_layer = cv2.bilateralFilter(image, d=9, sigmaColor=80, sigmaSpace=80)
     
-    # El filtro bilateral suaviza la imagen pero mantiene los bordes nítidos.
-    # d=15: Diámetro del vecindario de píxeles.
-    # sigmaColor=80: Cuán diferentes pueden ser los colores para ser promediados.
-    # sigmaSpace=80: Cuán lejos pueden estar los píxeles para influenciarse.
-    smoothed_image = cv2.bilateralFilter(image, d=15, sigmaColor=80, sigmaSpace=80)
+    details_mask = np.zeros(image.shape[:2], dtype=np.uint8)
+    detail_areas = [LEFT_EYE, RIGHT_EYE, LEFT_EYEBROW, RIGHT_EYEBROW, MOUTH]
+    for area in detail_areas:
+        points = src_landmarks[area].astype(np.int32)
+        hull = cv2.convexHull(points)
+        cv2.fillConvexPoly(details_mask, hull, 255)
+        
+    details_mask = cv2.GaussianBlur(details_mask, (9, 9), 4)
+    details_mask_float = cv2.cvtColor(details_mask, cv2.COLOR_GRAY2BGR).astype(float) / 255.0
 
-    # --- Etapa 2: Deformación Guiada de la Estructura ---
-
-    # Creamos una copia de la imagen suavizada que vamos a deformar.
-    output_image = smoothed_image.copy()
-
-    # Realizamos la triangulación de Delaunay en los landmarks de DESTINO.
-    # Esto asegura que la malla de deformación no tenga triángulos invertidos.
+    # Combinamos la piel suavizada con los detalles originales para crear la "textura" base.
+    base_texture = smoothed_skin_layer * (1 - details_mask_float) + original_details_layer * details_mask_float
+    base_texture = base_texture.astype(np.uint8)
+    
+    # --- Etapa 2: Deformar la Textura Compuesta a la Nueva Estructura ---
+    
+    rejuvenated_face = np.zeros_like(image)
     try:
+        from scipy.spatial import Delaunay
         delaunay = Delaunay(dst_landmarks)
         triangles = delaunay.simplices
     except Exception:
-        # Si los landmarks de destino son inválidos, usamos los de origen como fallback.
-        delaunay = Delaunay(src_landmarks)
-        triangles = delaunay.simplices
+        triangles = []
 
     for tri_indices in triangles:
-        # Vértices de los triángulos en la imagen original (src) y la de destino (dst)
         src_tri = src_landmarks[tri_indices].astype(np.float32)
         dst_tri = dst_landmarks[tri_indices].astype(np.float32)
-
-        # Encontrar la transformación afín
-        warp_mat = cv2.getAffineTransform(src_tri, dst_tri)
         
-        # Encontrar el rectángulo que enmarca el triángulo de destino
-        x, y, w, h = cv2.boundingRect(dst_tri)
+        mat = cv2.getAffineTransform(src_tri, dst_tri)
+        warped_region = cv2.warpAffine(base_texture, mat, (image.shape[1], image.shape[0]), borderMode=cv2.BORDER_REFLECT_101)
         
-        # Deformar
-        warped_region = cv2.warpAffine(smoothed_image, warp_mat, (image.shape[1], image.shape[0]))
-        
-        # Crear una máscara para el triángulo
-        mask = np.zeros_like(smoothed_image, dtype=np.uint8)
+        mask = np.zeros_like(image, dtype=np.uint8)
         cv2.fillConvexPoly(mask, dst_tri.astype(np.int32), (255, 255, 255))
         
-        # Copiar la región deformada en la imagen de salida, usando la máscara
-        output_image = np.where(mask > 0, warped_region, output_image)
-        
-    # --- Etapa 3: Mezcla Final para Integración ---
+        rejuvenated_face = np.where(mask > 0, warped_region, rejuvenated_face)
 
-    # Crear una máscara que cubra toda la cara para una mezcla suave con la imagen original
+    # --- Etapa 3: Integración Final Robusta con seamlessClone ---
+    # (Aquí está la corrección clave que elimina el efecto "máscara" y "recorte")
+
+    # Creamos una máscara precisa que define el área exacta de la cara deformada.
+    final_mask = np.zeros(image.shape[:2], dtype=np.uint8)
     hull_indices = cv2.convexHull(np.int32(dst_landmarks), returnPoints=False)
     hull_points = dst_landmarks[hull_indices.flatten()].astype(np.int32)
-    face_mask = np.zeros_like(image, dtype=np.uint8)
-    cv2.fillConvexPoly(face_mask, hull_points, (255, 255, 255))
-
-    # Difuminar los bordes de la máscara para una transición invisible
-    face_mask = cv2.GaussianBlur(face_mask, (15, 15), 30)
-
-    # Convertir a flotantes para la mezcla
-    mask_float = face_mask.astype(float) / 255.0
-    image_float = image.astype(float)
-    output_float = output_image.astype(float)
-
-    # Combinar la cara rejuvenecida con el fondo/pelo original
-    final_image_float = image_float * (1 - mask_float) + output_float * mask_float
+    cv2.fillConvexPoly(final_mask, hull_points, 255)
     
-    return final_image_float.astype(np.uint8)
+    # Encontramos el centro de la cara.
+    r = cv2.boundingRect(hull_points)
+    center = (r[0] + r[2] // 2, r[1] + r[3] // 2)
+
+    # Protección anti-errores para asegurar que el centro siempre esté dentro de la imagen.
+    h, w = image.shape[:2]
+    center = (min(w - 1, max(0, center[0])), min(h - 1, max(0, center[1])))
+    
+    # Usamos seamlessClone. Mezclará la iluminación y el color de `rejuvenated_face`
+    # con los de `image` a lo largo del borde definido por `final_mask`.
+    output = cv2.seamlessClone(rejuvenated_face, image, final_mask, center, cv2.NORMAL_CLONE)
+
+    return output

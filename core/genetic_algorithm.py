@@ -38,71 +38,94 @@ class GeneticRejuvenator:
    # Reemplaza la función en core/genetic_algorithm.py
 
     # Reemplaza la función en core/genetic_algorithm.py
+# Reemplaza la función en core/genetic_algorithm.py
+
+   # Reemplaza la función en core/genetic_algorithm.py
 
     def _calculate_fitness(self, chromosome: np.ndarray) -> float:
         """
-        Calcula la aptitud enfocándose en levantar los rasgos faciales contra la gravedad.
+        Calcula la aptitud con un balance que premia la mejora y penaliza la distorsión de forma justa.
         """
         modified_landmarks = self.original_landmarks + chromosome
         fitness_score = 0.0
 
-        # --- Heurística Principal: Movimiento Vertical Ascendente (Anti-gravedad) ---
-        # Calculamos el desplazamiento vertical promedio de TODOS los landmarks.
-        # Premiamos a las soluciones que mueven la cara hacia ARRIBA (menor valor Y).
-        # Esto simula un "lifting" facial general.
-        original_center_y = np.mean(self.original_landmarks[:, 1])
-        modified_center_y = np.mean(modified_landmarks[:, 1])
-        fitness_score += (original_center_y - modified_center_y) * 5.0 # ¡Este es nuestro objetivo principal!
+        # --- Premios (Incentivos para el cambio) ---
 
-        # --- Heurísticas Secundarias para refinar ---
-        
-        # Adelgazar la mandíbula inferior
+        # Heurística 1: Levantar las cejas. Un lifting facial visible.
+        original_eyebrow_y = np.mean(self.original_landmarks[LEFT_EYEBROW_UPPER + RIGHT_EYEBROW_UPPER, 1])
+        modified_eyebrow_y = np.mean(modified_landmarks[LEFT_EYEBROW_UPPER + RIGHT_EYEBROW_UPPER, 1])
+        fitness_score += (original_eyebrow_y - modified_eyebrow_y) * 4.0 # Premio alto
+
+        # Heurística 2: Afinar la mandíbula inferior.
         original_jaw_width = self.original_landmarks[JAWLINE, 0].max() - self.original_landmarks[JAWLINE, 0].min()
         modified_jaw_width = modified_landmarks[JAWLINE, 0].max() - modified_landmarks[JAWLINE, 0].min()
-        fitness_score += (original_jaw_width - modified_jaw_width) * 2.0
+        fitness_score += (original_jaw_width - modified_jaw_width) * 3.0 # Premio moderado
 
-        # Levantar las comisuras de los labios (índices 61 y 291)
+        # Heurística 3: Levantar comisuras de la boca.
         original_mouth_corners_y = np.mean(self.original_landmarks[[61, 291], 1])
         modified_mouth_corners_y = np.mean(modified_landmarks[[61, 291], 1])
-        fitness_score += (original_mouth_corners_y - modified_mouth_corners_y) * 3.0
+        fitness_score += (original_mouth_corners_y - modified_mouth_corners_y) * 3.5 # Premio alto
 
-        # --- Penalización por Movimiento Excesivo ---
-        # Penalizamos solo los movimientos horizontales exagerados para no limitar el lifting vertical.
-        horizontal_displacement = np.sum(np.abs(chromosome[:, 0]))
-        fitness_score -= horizontal_displacement * 0.15
+        # --- Castigo (Penalización por distorsión) ---
+        # La penalización debe ser mucho más pequeña que los premios para permitir la evolución.
+        total_displacement = np.sum(np.linalg.norm(chromosome, axis=1))
+        fitness_score -= total_displacement * 0.05 # Penalización pequeña y justa
 
         return max(0, fitness_score)
 
+    # Reemplaza la función _selection en core/genetic_algorithm.py
+
     def _selection(self, fitness_scores: np.ndarray):
         """
-        Selecciona a los padres para la siguiente generación (Selección por Torneo).
+        Selecciona a los padres para la siguiente generación (Selección Basada en Ranking).
         """
-        parents = []
-        for _ in range(self.population_size):
-            # Elige 3 individuos al azar (tamaño del torneo = 3)
-            tournament_indices = np.random.choice(self.population_size, 3, replace=False)
-            tournament_fitness = fitness_scores[tournament_indices]
-            # El ganador del torneo es el que tiene mayor fitness
-            winner_index = tournament_indices[np.argmax(tournament_fitness)]
-            parents.append(self.population[winner_index])
-        return np.array(parents)
+        # 1. Obtenemos los índices que ordenarían el fitness de peor a mejor.
+        sorted_indices = np.argsort(fitness_scores)
+        
+        # 2. Creamos los rangos: el peor tiene rango 1, el mejor tiene rango N.
+        ranks = np.arange(1, self.population_size + 1)
+        
+        # 3. Calculamos la probabilidad de selección basada en el rango.
+        # Los individuos con mayor rango (mejor fitness) tienen mayor probabilidad.
+        probabilities = ranks / np.sum(ranks)
+        
+        # 4. Seleccionamos a los padres. Los individuos con mayor fitness serán elegidos más a menudo.
+        # Creamos un array temporal de la población ordenada por fitness.
+        sorted_population = self.population[sorted_indices]
+        
+        # Elegimos los índices de la población ordenada según las probabilidades del ranking.
+        chosen_indices = np.random.choice(self.population_size, size=self.population_size, p=probabilities)
+        
+        parents = sorted_population[chosen_indices]
+        
+        return parents
+
+# Reemplaza la función _crossover en core/genetic_algorithm.py
 
     def _crossover(self, parents: np.ndarray):
         """
-        Crea la siguiente generación combinando los genes de los padres.
+        Crea la siguiente generación combinando los genes de los padres (Crossover Uniforme).
         """
         offspring = np.empty_like(self.population)
         for i in range(0, self.population_size, 2):
             parent1, parent2 = parents[i], parents[i+1]
-            # Punto de cruce: elige un landmark al azar.
-            crossover_point = np.random.randint(1, self.num_landmarks - 1)
-            # El hijo 1 obtiene la primera parte del padre 1 y la segunda del padre 2.
-            child1 = np.vstack((parent1[:crossover_point], parent2[crossover_point:]))
-            child2 = np.vstack((parent2[:crossover_point], parent1[crossover_point:]))
-            offspring[i] = child1
+            
+            # 1. Creamos una "máscara" de booleanos. True = gen del padre 1, False = gen del padre 2.
+            # Cada landmark tiene su propia decisión.
+            mask = np.random.rand(self.num_landmarks) < 0.5
+            
+            # 2. Creamos los hijos usando la máscara. np.where es perfecto para esto.
+            # Para cada landmark, si la máscara es True, el hijo 1 toma del padre 1. Si es False, del padre 2.
+            child1_genes = np.where(mask[:, np.newaxis], parent1, parent2)
+            child2_genes = np.where(~mask[:, np.newaxis], parent1, parent2) # El hijo 2 toma la máscara invertida
+            
+            offspring[i] = child1_genes
             if i + 1 < self.population_size:
-                offspring[i+1] = child2
+                offspring[i+1] = child2_genes
+                
         return offspring
+
+    
 
     def _mutate(self, offspring: np.ndarray):
         """

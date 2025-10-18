@@ -1,0 +1,66 @@
+# ===============================
+# 🧠 FaceEvolver Project (.gitignore)
+# ===============================
+
+# --- Entorno virtual ---
+.venv/
+venv/
+env/
+ENV/
+
+# --- Archivos compilados de Python ---
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pdb
+
+# --- Archivos temporales / cache ---
+*.log
+*.tmp
+*.bak
+*.swp
+.DS_Store
+Thumbs.db
+
+# --- Configuración del sistema / IDE ---
+.vscode/
+.idea/
+*.code-workspace
+
+# --- Archivos de ejecución / build ---
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# --- Dependencias descargadas / libs externas ---
+*.whl
+
+# --- Datos de MediaPipe / OpenCV temporales ---
+mediapipe_models/
+opencv_cache/
+
+# --- Imágenes de entrada/salida ---
+input_images/
+output_images/
+results/
+*.jpg
+*.jpeg
+*.png
+
+# (Si quieres subir imágenes de ejemplo, crea una carpeta "examples/" y quítala del ignore)
+
+# --- Notebooks y outputs ---
+notebooks/.ipynb_checkpoints/
+*.ipynb_save
+*.ipynb_checkpoint
+
+# --- Configuración de SO ---
+desktop.ini
+
+# --- Otros ---
+*.zip
+*.tar
+*.gz
+*.7z

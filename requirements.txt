@@ -1,0 +1,20 @@
+# -----------------------------------------------------------------------------
+# Requerimientos para el Proyecto de Algoritmos Genéticos
+# para Transformación de Rostros
+# -----------------------------------------------------------------------------
+# Para instalar todas estas librerías, ejecuta el siguiente comando en tu terminal:
+# pip install -r requirements.txt
+# -----------------------------------------------------------------------------
+
+# Librería principal para todo el procesamiento de imágenes (carga, guardado,
+# aplicación de filtros, conversiones de color, etc.).
+opencv-python
+
+# Librería fundamental para operaciones numéricas y el manejo de arrays de imágenes.
+# Es una dependencia de OpenCV, pero es buena práctica listarla explícitamente.
+numpy
+
+# Requerida por los archivos no utilizados en el flujo principal (face_detector.py),
+# pero incluida para que el proyecto completo sea funcional.
+# Proporciona detección avanzada de puntos faciales (landmarks).
+mediapipe

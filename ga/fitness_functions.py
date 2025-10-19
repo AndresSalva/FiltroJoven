@@ -52,12 +52,12 @@ def original_fitness(orig_bgr, proc_bgr, masks):
     return float(1.20 * wrinkle_gain + 0.80 * edge_pres + 0.60 * even_gain + 0.50 * ssim_ns - 0.80 * blur_pen)
 
 
-# --- Fitness 2: Proximidad a un Ideal Suavizado ---
+# --- Fitness 2: Proximidad a un Ideal Suavizado (VERSIÓN CORREGIDA) ---
 
 def ideal_proximity_fitness(orig_bgr, proc_bgr, masks):
     """
     Mide qué tan cerca está la piel procesada de una versión "idealmente suave" de la piel original,
-    mientras se maximiza la nitidez en ojos y labios.
+    mientras se maximiza la nitidez en ojos y labios. INCLUYE UNA PENALIZACIÓN POR EXCESO DE PLANITUD.
     """
     gray_o = cv2.cvtColor(orig_bgr, cv2.COLOR_BGR2GRAY)
     gray_p = cv2.cvtColor(proc_bgr, cv2.COLOR_BGR2GRAY)
@@ -72,7 +72,7 @@ def ideal_proximity_fitness(orig_bgr, proc_bgr, masks):
     if np.any(skin_only > 0):
         error = np.mean(np.abs(gray_p[skin_only > 0].astype(float) - ideal_smooth_skin[skin_only > 0].astype(float)))
     else:
-        error = 255.0  # Error máximo si no hay piel
+        error = 255.0
 
     # La puntuación de suavidad es inversamente proporcional al error.
     smoothness_score = 1.0 / (error + 1e-6)
@@ -80,8 +80,17 @@ def ideal_proximity_fitness(orig_bgr, proc_bgr, masks):
     # 3. Medir la nitidez en ojos y labios (queremos maximizarla).
     sharpness_score = edge_energy(gray_p, eyes_lips)
 
-    # 4. Combinar las puntuaciones. Los pesos se pueden ajustar.
-    return float(0.6 * smoothness_score + 0.4 * sharpness_score)
+    # === INICIO DE LA CORRECCIÓN ===
+    # 4. Añadir una penalización por áreas demasiado planas o borrosas (como el cuadrado blanco)
+    lap_p = laplacian_variance(gray_p, skin_only)
+    blur_pen = 0.0
+    if lap_p < 15.0: # Si la nitidez de la piel es muy baja...
+        # ...se calcula una penalización. Cuanto más bajo lap_p, mayor la penalización.
+        blur_pen = (15.0 - lap_p) * 0.1 
+    # === FIN DE LA CORRECCIÓN ===
+
+    # 5. Combinar las puntuaciones, restando la penalización.
+    return float(0.6 * smoothness_score + 0.4 * sharpness_score - blur_pen)
 
 
 # --- Fitness 3: Naturalidad de Color y Textura ---
@@ -94,26 +103,21 @@ def color_texture_fitness(orig_bgr, proc_bgr, masks):
     skin_only = masks['skin_only']
     
     # 1. Analizar la naturalidad del color de la piel.
-    # Comparamos el histograma de color en el espacio Lab (perceptualmente uniforme).
     orig_lab = cv2.cvtColor(orig_bgr, cv2.COLOR_BGR2LAB)
     proc_lab = cv2.cvtColor(proc_bgr, cv2.COLOR_BGR2LAB)
 
-    # Canales a y b representan el color (crominancia).
     hist_orig = cv2.calcHist([orig_lab], [1, 2], skin_only, [16, 16], [-128, 127, -128, 127])
     hist_proc = cv2.calcHist([proc_lab], [1, 2], skin_only, [16, 16], [-128, 127, -128, 127])
     
     cv2.normalize(hist_orig, hist_orig, alpha=0, beta=1, norm_type=cv2.NORM_MINMAX)
     cv2.normalize(hist_proc, hist_proc, alpha=0, beta=1, norm_type=cv2.NORM_MINMAX)
     
-    # La puntuación de color es la similitud por correlación entre los histogramas.
     color_score = cv2.compareHist(hist_orig, hist_proc, cv2.HISTCMP_CORREL)
 
     # 2. Evaluar la textura buscando un "punto dulce" de nitidez.
-    # El objetivo no es minimizar la varianza del Laplaciano, sino acercarse a un valor ideal.
     lap_var = laplacian_variance(cv2.cvtColor(proc_bgr, cv2.COLOR_BGR2GRAY), skin_only)
-    ideal_lap_var = 25.0  # Umbral objetivo de "nitidez natural".
+    ideal_lap_var = 25.0
     
-    # Usamos una función Gaussiana: la puntuación es máxima en el ideal y decae si se aleja.
     texture_quality = np.exp(-((lap_var - ideal_lap_var)**2) / (2 * (10.0**2)))
 
     return float(0.5 * color_score + 0.5 * texture_quality)

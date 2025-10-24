@@ -18,3 +18,8 @@ numpy
 # pero incluida para que el proyecto completo sea funcional.
 # Proporciona detección avanzada de puntos faciales (landmarks).
 mediapipe
+
+# Herramientas para análisis de datos y visualización en el benchmark
+pandas
+seaborn
+matplotlib>=3.8

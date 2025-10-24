@@ -15,11 +15,7 @@ from ga import mutation_operators
 
 # --- Mapeos de Nombres a Funciones para la selección desde la línea de comandos ---
 
-FITNESS_MAP = {
-    "original": fitness_functions.original_fitness,
-    "ideal": fitness_functions.ideal_proximity_fitness,
-    "color": fitness_functions.color_texture_fitness,
-}
+FITNESS_NAMES = tuple(fitness_functions.FITNESS_FUNCTIONS.keys())
 
 SELECTION_MAP = {
     "tournament": selection_operators.tournament_selection,
@@ -59,7 +55,7 @@ def main():
     parser.add_argument("--pop", type=int, default=24, help="Population size for each generation.")
     
     # Selección de componentes del AG
-    parser.add_argument("--fitness", type=str, default="original", choices=FITNESS_MAP.keys(),
+    parser.add_argument("--fitness", type=str, default="original", choices=FITNESS_NAMES,
                         help="Fitness function to use for evaluation.")
     parser.add_argument("--selection", type=str, default="tournament", choices=SELECTION_MAP.keys(),
                         help="Selection operator to use.")
@@ -82,7 +78,7 @@ def main():
         sys.exit(1)
         
     # Seleccionar las funciones basadas en los argumentos
-    fitness_func = FITNESS_MAP[args.fitness]
+    fitness_func = fitness_functions.get_tracked_fitness(args.fitness)
     selection_func = SELECTION_MAP[args.selection]
     crossover_func = CROSSOVER_MAP[args.crossover]
     mutation_func = MUTATION_MAP[args.mutation]

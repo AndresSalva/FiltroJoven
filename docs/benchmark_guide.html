@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Benchmark de Algoritmos Geneticos – Guia Detallada</title>
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; margin: 2rem; max-width: 960px; }
+    code { background-color: #f3f3f3; padding: 0.15rem 0.35rem; border-radius: 4px; font-family: "Courier New", monospace; }
+    pre { background-color: #f3f3f3; padding: 1rem; border-radius: 6px; overflow: auto; }
+    h1, h2, h3 { color: #1f3a93; }
+    table { border-collapse: collapse; width: 100%; margin: 1rem 0; }
+    th, td { border: 1px solid #ccc; padding: 0.5rem; text-align: left; }
+    blockquote { border-left: 4px solid #1f3a93; padding-left: 1rem; margin-left: 0; color: #444; }
+  </style>
+</head>
+<body>
+  <h1>Benchmark de Algoritmos Geneticos – Guia Detallada</h1>
+  <p>Este documento explica paso a paso como funciona el modulo <code>experiments/benchmark.py</code> y como replicar un barrido completo de configuraciones conforme a los requisitos de la practica.</p>
+
+  <h2>1. Proposito del benchmark</h2>
+  <p>El script automatiza la <strong>experimentacion sistematica</strong> sobre el algoritmo genetico de rejuvenecimiento facial. Para cada combinacion de:</p>
+  <ul>
+    <li>funcion de aptitud,</li>
+    <li>operador de seleccion,</li>
+    <li>operador de cruce,</li>
+    <li>operador de mutacion,</li>
+  </ul>
+  <p>ejecuta varias corridas independientes, registra metricas cuantitativas y genera reportes/figuras que facilitan el analisis de convergencia, rendimiento y diversidad poblacional.</p>
+
+  <h2>2. Requisitos previos</h2>
+  <ol>
+    <li>
+      <strong>Dependencias</strong>: instalar desde la raiz del proyecto
+      <pre><code>python -m pip install -r requirements.txt</code></pre>
+      <p>Si usas el entorno virtual incluido, recuerda activar <code>.\venv\Scripts\activate</code>.</p>
+    </li>
+    <li><strong>Imagenes de entrada</strong>: colocar las fotos en <code>input_images/</code>. El benchmark usa por defecto <code>old_person.jpg</code>, pero puedes cambiarla con <code>--image</code>.</li>
+    <li>
+      <strong>Directorio de resultados</strong>: <code>benchmark_results/</code> se crea automaticamente y contiene:
+      <ul>
+        <li><code>data/</code> – CSV con runs, resumen y series historicas.</li>
+        <li><code>figures/</code> – graficas generadas (boxplot, heatmaps, convergencia, diversidad).</li>
+        <li><code>images/</code> (opcional) – capturas por corrida si usas <code>--save-images</code>.</li>
+        <li><code>reports/benchmark_report.md</code> – reporte resumido en Markdown.</li>
+      </ul>
+    </li>
+  </ol>
+
+  <h2>3. Parametros clave del script</h2>
+  <p>La cabecera <code>parse_args()</code> define todos los argumentos configurables:</p>
+  <table>
+    <thead>
+      <tr>
+        <th>Flag</th>
+        <th>Descripcion</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>--image</code></td>
+        <td>Nombre del archivo dentro de <code>input_images/</code>.</td>
+      </tr>
+      <tr>
+        <td><code>--input-dir</code> / <code>--output-dir</code></td>
+        <td>Directorios de entrada y salida (por defecto <code>input_images</code> y <code>benchmark_results</code>).</td>
+      </tr>
+      <tr>
+        <td><code>--runs</code></td>
+        <td>Numero de corridas repetidas por combinacion (requisito: 10).</td>
+      </tr>
+      <tr>
+        <td><code>--gens</code> / <code>--pop</code></td>
+        <td>Generaciones y tamano de poblacion del AG.</td>
+      </tr>
+      <tr>
+        <td><code>--fitness</code></td>
+        <td>Lista de claves del registro <code>FITNESS_SPEC_REGISTRY</code>. Si omites la flag, usa todas.</td>
+      </tr>
+      <tr>
+        <td><code>--selection</code>, <code>--crossover</code>, <code>--mutation</code></td>
+        <td>Listas de operadores; acepta multiples valores.</td>
+      </tr>
+      <tr>
+        <td><code>--calibration-samples</code></td>
+        <td>Muestras aleatorias para estimar medias y desvios al combinar funciones de aptitud.</td>
+      </tr>
+      <tr>
+        <td><code>--base-seed</code></td>
+        <td>Semilla base; cada corrida deriva su propia semilla (<code>base_seed + run_id</code>).</td>
+      </tr>
+      <tr>
+        <td><code>--save-images</code></td>
+        <td>Guarda las imagenes resultantes por corrida en <code>benchmark_results/images/</code>.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Importante sobre semillas</h3>
+  <p>Cada tarea asigna <code>seed = base_seed + run_counter</code>. Esa semilla se inyecta en <code>run_genetic_algorithm()</code>, que propaga el valor a <code>random</code>, <code>numpy.random</code> y al generador usado para muestrear individuos. Con esto, los resultados pueden reproducirse exactamente repitiendo la configuracion.</p>
+
+  <h2>4. Flujo interno del benchmark</h2>
+  <ol>
+    <li><strong>Carga de imagen y mascaras</strong> – <code>utils.image_utils.load_image()</code> trae la imagen y <code>compute_masks()</code> precalcula las mascaras faciales para reusar en todas las corridas.</li>
+    <li><strong>Registro de configuraciones</strong> – El diccionario <code>FITNESS_SPEC_REGISTRY</code> describe cada clave (<code>original</code>, <code>ideal</code>, <code>color</code> y combinaciones). Cada especificacion produce una factory de funcion de aptitud y metadatos (peso, componentes, estadisticos de normalizacion).</li>
+    <li><strong>Producto cartesiano</strong> – Con <code>itertools.product</code> se generan todas las combinaciones <code>fitness × selection × crossover × mutation</code>. Para cada combinacion se crean <code>runs</code> tareas independientes con semillas distintas.</li>
+    <li><strong>Ejecucion paralela</strong> – Las tareas se lanzan en un <code>ThreadPoolExecutor</code>. Cada tarea:
+      <ul>
+        <li>Construye la funcion de aptitud.</li>
+        <li>Llama a <code>run_genetic_algorithm()</code> con <code>track_history=True</code> y la semilla asignada.</li>
+        <li>Recibe la mejor solucion y sus historicos (aptitud, metricas, diversidad).</li>
+        <li>Guarda la imagen final si se activo <code>--save-images</code>.</li>
+        <li>Compila un registro con configuracion, mejor aptitud, parametros, metricas por componente, <code>diversity_history</code> y duracion.</li>
+      </ul>
+    </li>
+    <li><strong>Agregado y persistencia</strong> – El script genera:
+      <ul>
+        <li><code>ga_benchmark_runs.csv</code>: una fila por corrida con <code>best_fitness</code>, <code>best_params</code>, <code>metrics</code>, <code>history</code>, <code>diversity_history</code> y <code>final_diversity</code>.</li>
+        <li><code>ga_benchmark_summary.csv</code>: promedios y desvios de aptitud/diversidad por combinacion.</li>
+        <li><code>ga_benchmark_history.csv</code>: series por generacion (<code>best_fitness</code>, <code>current_best</code>, <code>diversity</code>).</li>
+      </ul>
+    </li>
+    <li><strong>Graficas y reporte</strong> – Se crean:
+      <ul>
+        <li><code>fitness_boxplot.png</code> – distribucion de mejores aptitudes por fitness y operador de seleccion.</li>
+        <li><code>heatmap_*.png</code> – mapa de calor con la aptitud promedio.</li>
+        <li><code>convergence_*.png</code> – curvas de convergencia promedio con ±1 desviacion estandar.</li>
+        <li><code>diversity_*.png</code> – curvas de diversidad poblacional promedio.</li>
+        <li><code>benchmark_report.md</code> – resumen en Markdown con tablas agregadas y enlaces a figuras.</li>
+      </ul>
+    </li>
+  </ol>
+
+  <h2>5. Ejecucion del barrido completo</h2>
+  <p>Para reproducir el barrido esperado (3 funciones de aptitud × 4 selecciones × 4 cruces × 1 mutacion, 10 corridas cada uno):</p>
+  <pre><code>.\venv\Scripts\python.exe experiments/benchmark.py `
+    --runs 10 --gens 20 --pop 24 --save-images `
+    --fitness original ideal color `
+    --selection tournament roulette rank sus `
+    --crossover single_point two_point k_point uniform `
+    --mutation gaussian
+</code></pre>
+  <blockquote>
+    Nota: reemplaza la ruta al interprete segun tu entorno (por ejemplo <code>python</code> en macOS/Linux con el entorno virtual activo).
+  </blockquote>
+
+  <h2>6. Revision de resultados</h2>
+  <ol>
+    <li>
+      <strong>CSV</strong> (<code>benchmark_results/data/</code>):
+      <ul>
+        <li><code>ga_benchmark_runs.csv</code>: revisa <code>best_params</code> y <code>final_diversity</code> para cada corrida.</li>
+        <li><code>ga_benchmark_summary.csv</code>: confirma que <code>runs</code> sea 10 por combinacion.</li>
+        <li><code>ga_benchmark_history.csv</code>: usa <code>generation</code>, <code>best_fitness</code> y <code>diversity</code> para analisis temporal.</li>
+      </ul>
+    </li>
+    <li>
+      <strong>Figuras</strong> (<code>benchmark_results/figures/</code>):
+      <ul>
+        <li><code>convergence_*.png</code>: curvas de convergencia para el analisis pedido.</li>
+        <li><code>diversity_*.png</code>: evidencia de la diversidad poblacional.</li>
+        <li><code>heatmap_*.png</code> y <code>fitness_boxplot.png</code>: comparativas entre combinaciones.</li>
+      </ul>
+    </li>
+    <li>
+      <strong>Reporte</strong> (<code>benchmark_results/reports/benchmark_report.md</code>):
+      <ul>
+        <li>Incluye tablas en Markdown con metricas agregadas y referencias a figuras.</li>
+      </ul>
+    </li>
+    <li>
+      <strong>Imagenes evolutivas</strong> (<code>benchmark_results/images/</code> si se uso <code>--save-images</code>):
+      <ul>
+        <li>Cada archivo se nombra <code>fitness_selection_crossover_mutation_runX.png</code> para identificar la configuracion exacta.</li>
+      </ul>
+    </li>
+  </ol>
+
+  <h2>7. Recomendaciones adicionales</h2>
+  <ul>
+    <li>Ajusta <code>--calibration-samples</code> si introduces nuevas funciones de aptitud compuestas; esto controla la normalizacion z-score.</li>
+    <li>Si usas otras imagenes (<code>--image</code>), considera agrupar resultados por carpeta para mantener ordenadas las salidas.</li>
+    <li>Para reproducibilidad exacta, documenta la combinacion de argumentos y el <code>base_seed</code> utilizado.</li>
+    <li>Antes de la entrega final:
+      <ul>
+        <li>Verifica que todas las combinaciones tienen 10 corridas (<code>runs = 10</code>).</li>
+        <li>Comprueba que las figuras de convergencia y diversidad estan presentes.</li>
+        <li>Adjunta el reporte generado o referencia su ubicacion en el informe principal.</li>
+      </ul>
+    </li>
+  </ul>
+
+  <p>Con esta guia puedes ejecutar, comprender y documentar el benchmark de forma alineada con los criterios indicados en la practica.</p>
+</body>
+</html>

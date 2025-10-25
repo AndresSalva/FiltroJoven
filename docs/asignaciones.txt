@@ -1,0 +1,5 @@
+Fernando Belmonte: Discusión 
+Nathanael Alba: Análisis cualitativo, propuesta de función fitness, orquestación de la evolucion individual por combinación.
+Andre Cadima: Funcion fitness original, versión inicial básica del ag, diseño inicial del código, informe inicial
+Melany Torrez: Conclusiones del informe, implementación de los mejores funciones fitness, propuesta de funciones fitness.
+Andres Salvatierra: Implementación del benchmark, gráficas, refactoring del modelo inicial básico, análisis cuantitativa, documentación general del código.

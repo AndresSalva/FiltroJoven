@@ -1,129 +1,122 @@
-# Benchmark de Algoritmos Genéticos – Guía Detallada
+# Benchmark de Algoritmos Geneticos - Guia Detallada
 
-Este documento explica paso a paso cómo funciona el módulo `experiments/benchmark.py` y cómo replicar un barrido completo de configuraciones conforme a los requisitos de la práctica.
+Este documento describe el funcionamiento del script `experiments/benchmark.py`, los argumentos disponibles y los productos que genera para documentar el rendimiento del algoritmo genetico de rejuvenecimiento facial.
 
-## 1. Propósito del benchmark
+## 1. Objetivo del benchmark
 
-El script automatiza la **experimentación sistemática** sobre el algoritmo genético de rejuvenecimiento facial. Para cada combinación de:
-- función de aptitud,
-- operador de selección,
-- operador de cruce,
-- operador de mutación,
+El benchmark automatiza la evaluacion sistematica de combinaciones de:
+- funciones de aptitud,
+- operadores de seleccion,
+- operadores de cruce,
+- operadores de mutacion.
 
-ejecuta varias corridas independientes, registra métricas cuantitativas y genera reportes/figuras que facilitan el análisis de convergencia, rendimiento y diversidad poblacional.
+Cada configuracion se ejecuta varias veces con semillas distintas, se registran metricas numericas y se producen reportes y figuras para analizar convergencia, rendimiento y diversidad poblacional.
 
 ## 2. Requisitos previos
 
-1. **Dependencias**: instalar desde la raíz del proyecto  
+1. **Dependencias**  
+   Instala los paquetes desde la raiz del proyecto:
    ```bash
    python -m pip install -r requirements.txt
-   ```  
-   Si usas el `venv` incluido, recuerda activar `.\venv\Scripts\activate`.
+   ```
+   Si utilizas el entorno virtual (`venv`), activalo antes de instalar y ejecutar comandos.
 
-2. **Imágenes de entrada**: colocar las fotos en `input_images/`. El benchmark usa por defecto `old_person.jpg`, pero puedes cambiarla con `--image`.
+2. **Imagenes de entrada**  
+   Ubica las fotos en `input_images/`. El script usa `old_person.jpg` por defecto, pero puedes elegir otra con `--image`.
 
-3. **Directorio de resultados**: `benchmark_results/` se crea automáticamente y contiene:
-   - `data/` – CSV con runs, resumen y series históricas.
-   - `figures/` – gráficas generadas (solo normalizadas CDF 0–1) y diversidad.
-   - `images/` (opcional) – capturas por corrida si usas `--save-images`, organizadas por subcarpeta de fitness.
-   - `reports/benchmark_report.md` – reporte resumido en Markdown.
+3. **Directorio de resultados**  
+   El argumento `--output-dir` crea una carpeta con la siguiente estructura:
+   - `data/`: archivos CSV con corridas individuales, resumen y series historicas.
+   - `figures/`: figuras normalizadas (CDF 0-1) y graficas de diversidad.
+   - `images/`: opcional, se llena cuando se activa `--save-images`.
+   - `reports/benchmark_report.md`: resumen en Markdown.
 
-## 3. Parámetros clave del script
+## 3. Argumentos principales
 
-La cabecera `parse_args()` define todos los argumentos configurables:
+La funcion `parse_args()` define los parametros configurables:
 
-| Flag | Descripción |
+| Flag | Descripcion |
 | --- | --- |
-| `--image` | Nombre del archivo dentro de `input_images/`. |
-| `--input-dir` / `--output-dir` | Directorios de entrada y salida (por defecto `input_images` y `benchmark_results`). |
-| `--runs` | Número de corridas repetidas por configuración (requisito: 10). |
-| `--gens` / `--pop` | Generaciones y tamaño de población del AG. |
-| `--fitness` | Lista de *keys* del registro `FITNESS_SPEC_REGISTRY`. Si omites la flag, usa todas. |
-| `--selection`, `--crossover`, `--mutation` | Listas de operadores; acepta múltiples valores. |
-| `--calibration-samples` | Muestras aleatorias para estimar medias/desvíos al combinar funciones de aptitud. |
-| `--base-seed` | Semilla base; cada corrida deriva su propia semilla (`base_seed + run_id`). |
-| `--save-images` | Guarda las imágenes resultantes por corrida en `benchmark_results/images/`. |
+| `--image` | archivo dentro de `input_images/`. |
+| `--input-dir`, `--output-dir` | directorios de entrada y salida. |
+| `--runs` | repeticiones por configuracion. |
+| `--gens`, `--pop` | generaciones y tamano de poblacion. |
+| `--fitness` | claves dentro de `FITNESS_SPEC_REGISTRY`. Si no se indica, usa todas. |
+| `--selection`, `--crossover`, `--mutation` | operadores a combinar. Se aceptan varios valores por flag. |
+| `--calibration-samples` | muestras aleatorias para estimar media y desviacion de cada fitness. |
+| `--base-seed` | semilla base utilizada para derivar las semillas de cada corrida. |
+| `--save-images` | guarda la imagen final de cada corrida. |
 
-### Importante sobre semillas
+**Reproducibilidad**  
+Cada tarea recibe `seed = base_seed + run_id`. Esa semilla se propaga a `random` y `numpy`, por lo que repetir la misma configuracion genera resultados identicos.
 
-Cada tarea asigna `seed = base_seed + run_counter`. Esa semilla se inyecta en `run_genetic_algorithm()`, que propaga el valor a `random`, `numpy.random` y al `Generator` para muestrear individuos. Con esto, los resultados pueden reproducirse exactamente repitiendo la configuración.
+## 4. Flujo del script
 
-## 4. Flujo interno del benchmark
+1. **Carga de recursos**  
+   `load_image()` abre la foto y `compute_masks()` calcula las mascaras faciales reutilizadas en todas las corridas.
 
-1. **Carga de imagen y máscaras**  
-   `utils.image_utils.load_image()` trae la imagen y `compute_masks()` precalcula las máscaras faciales para reusar en todas las corridas.
+2. **Definicion de combinaciones**  
+   - `FITNESS_SPEC_REGISTRY` describe `original`, `ideal`, `color` y sus variantes compuestas.  
+   - Las combinaciones se obtienen con `itertools.product(fitness, seleccion, cruce, mutacion)`.
 
-2. **Registro de configuraciones**  
-   - `FITNESS_SPEC_REGISTRY` describe cada key (`original`, `ideal`, `color` y combinaciones).  
-   - Cada especificación produce una *factory* de función de aptitud y metadatos (peso, componentes, stats normalizados).
+3. **Planificacion y ejecucion paralela**  
+   Se crea una tarea por corrida. Cada tarea:
+   - construye la funcion de aptitud con su metadata,
+   - ejecuta `run_genetic_algorithm()` con historial activado,
+   - guarda la imagen si se solicito,
+   - acumula resultados y tiempos en un diccionario.
 
-3. **Producto cartesiano**  
-   Con `itertools.product` se generan todas las combinaciones `fitness × selection × crossover × mutation`. Para cada combinación se crean `runs` tareas independientes con semillas distintas.
+4. **Persistencia y analisis**  
+   - `ga_benchmark_runs.csv`: corridas individuales con parametros, metricas, historial y diversidad.
+   - `ga_benchmark_summary.csv`: promedio y desviacion de aptitud/diversidad por combinacion.
+   - `ga_benchmark_history.csv`: serie por generacion (mejor fitness, mejor historico y diversidad).
 
-4. **Ejecución paralela**  
-   Las tareas se lanzan en un `ThreadPoolExecutor`. Cada **tarea**:
-   - Construye la función de aptitud.
-   - Llama a `run_genetic_algorithm()` con `track_history=True` y la semilla asignada.
-   - Recibe la mejor solución y sus históricos (aptitud por generación, métricas, diversidad).
-   - Guarda la imagen final si se activó `--save-images`.
-   - Compila un registro con: configuración, mejor aptitud, parámetros, métricas por componentes, `diversity_history`, duración, etc.
+5. **Visualizacion y reporte**  
+   - `fitness_boxplot_cdf.png`: distribucion de la mejor aptitud normalizada por fitness y seleccion.
+   - `heatmap_<fitness>_cdf.png`: mapa de calor del promedio normalizado por seleccion y cruce.
+   - `convergence_<fitness>_cdf.png`: convergencia en escala CDF 0-1 con banda +/- 1 desviacion.
+   - `diversity_<fitness>.png`: evolucion de la diversidad poblacional.
+   - `benchmark_report.md`: tablas con estadisticos CDF y listado de figuras generadas.
 
-5. **Agregado y persistencia**  
-   - `ga_benchmark_runs.csv`: cada fila es una corrida. Columnas clave:
-     - `best_fitness`, `best_params`, `metrics`, `history`, `diversity_history`, `final_diversity`.
-   - `ga_benchmark_summary.csv`: promedios y desviaciones de aptitud/diversidad, contados por combinación.
-   - `ga_benchmark_history.csv`: series por generación (`best_fitness`, `current_best`, `diversity`).
+## 5. Comandos utiles
 
-6. **Gráficas y reporte**  
-   - `fitness_boxplot_cdf.png`: distribución de mejores aptitudes normalizadas (CDF 0–1) por fitness y selección.  
-   - `heatmap_<fitness>_cdf.png`: mapa de calor del promedio normalizado (CDF) por selección × cruce para cada fitness.  
-   - `convergence_<fitness>_cdf.png`: curvas de convergencia (CDF) con banda de ±1 desvío.  
-   - `diversity_<fitness>.png`: curvas de diversidad poblacional promedio por generación.  
-   - `generate_report`: crea `benchmark_report.md` con tablas normalizadas (CDF) y enlaces a figuras.
-
-## 5. Ejecución del barrido completo
-
-Para reproducir el barrido esperado (3 funciones de aptitud × 4 selecciones × 4 cruces × 1 mutación, 10 corridas cada uno):
-
+**Corrida rapida de sanidad**
 ```powershell
-.\venv\Scripts\python.exe experiments/benchmark.py `
-    --runs 10 --gens 20 --pop 24 --save-images `
+python -u experiments/benchmark.py --image tuto.jpg --runs 1 --gens 2 --pop 6 `
+    --fitness original ideal color --selection tournament --crossover single_point `
+    --mutation gaussian --calibration-samples 10 --output-dir benchmark_results_quick
+```
+
+**Barrido completo recomendado**
+```powershell
+python -u experiments/benchmark.py --image tuto.jpg --runs 10 --gens 20 --pop 24 `
     --fitness original ideal color `
     --selection tournament roulette rank sus `
     --crossover single_point two_point k_point uniform `
-    --mutation gaussian
+    --mutation gaussian --calibration-samples 40 --save-images `
+    --workers 8 --output-dir benchmark_results
 ```
 
-> Nota: reemplaza la ruta al intérprete según tu entorno (por ejemplo `python` en macOS/Linux con el venv activo).
+## 6. Revision de resultados
 
-## 6. Revisión de resultados
+1. **CSV en `data/`**  
+   - Verifica que `ga_benchmark_summary.csv` registre 10 corridas por combinacion.  
+   - Inspecciona `best_params`, `history` y `diversity_history` en `ga_benchmark_runs.csv` para referencias directas.
 
-1. **CSV** (`benchmark_results/data/`):
-   - `ga_benchmark_runs.csv`: inspecciona `best_params` y `final_diversity` para cada corrida.
-   - `ga_benchmark_summary.csv`: verifica que `runs` sea 10 por combinación.
-   - `ga_benchmark_history.csv`: utiliza `generation`, `best_fitness`, `diversity` para análisis temporal.
+2. **Figuras en `figures/`**  
+   Confirma que existan boxplots, heatmaps, curvas de convergencia y graficas de diversidad para cada fitness.
 
-2. **Figuras** (`benchmark_results/figures/`):
-   - `convergence_*_cdf.png`: curvas de convergencia normalizadas (0–1).
-   - `diversity_*.png`: diversidad poblacional por generación.
-   - `heatmap_*_cdf.png`, `fitness_boxplot_cdf.png`: comparativas entre combinaciones en escala 0–1.
+3. **Reporte en `reports/benchmark_report.md`**  
+   Contiene tablas normalizadas (CDF 0-1) y una lista de figuras localizadas por ruta relativa.
 
-3. **Reporte** (`benchmark_results/reports/benchmark_report.md`):
-   - Contiene tablas en Markdown con métricas agregadas y referencias a las figuras generadas.
+4. **Imagenes opcionales en `images/`**  
+   Cuando se usa `--save-images`, cada imagen queda en `images/<fitness>/` con el nombre de la configuracion y el numero de corrida.
 
-4. **Imágenes evolutivas** (`benchmark_results/images/` si `--save-images`):
-   - Subcarpetas por fitness (`/color`, `/ideal`, `/original`).
-   - Nombre `fitness_selection_crossover_mutation_runX.png` para ubicar la configuración exacta.
+## 7. Consejos finales
 
-## 7. Recomendaciones adicionales
+- Ajusta `--runs`, `--gens` y `--pop` para exploraciones rapidas antes de lanzar el barrido definitivo.
+- Incrementa `--calibration-samples` si agregas nuevas funciones de aptitud y necesitas percentiles mas estables.
+- Documenta las semillas, argumentos y rutas de salida para poder replicar los resultados en el informe final.
+- Revisa el log de consola: el script imprime el progreso, rutas de los archivos generados y posibles advertencias.
 
-- Normalización: el benchmark estima media y desvío por fitness vía muestreo aleatorio; transforma cada score a z y luego a **CDF 0–1** para todas las visualizaciones.
-- Ajusta `--calibration-samples` si introduces nuevas funciones de aptitud; más muestras → percentiles más estables.
-- Si usas otras imágenes (`--image`), considera agrupar resultados por carpeta para mantener ordenadas las salidas.
-- Para reproducibilidad exacta, documenta la combinación de argumentos y el `base_seed` utilizado.
-- Antes de cualquier entrega, confirma que:
-  - Todas las combinaciones tienen 10 corridas (`runs = 10`).
-  - Las figuras de convergencia y diversidad están presentes.
-  - El reporte se adjunta en el informe final como anexo o referencia cruzada.
-
-Con esta guía puedes ejecutar, comprender y documentar el benchmark de forma alineada con los criterios del PDF de la práctica.
+Con esta guia puedes ejecutar, entender y reportar el benchmark manteniendo coherencia con el codigo fuente actual.

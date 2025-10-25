@@ -2,102 +2,76 @@
 <html lang="es">
 <head>
   <meta charset="utf-8">
-  <title>Conceptos Clave del Proyecto de Rejuvenecimiento Facial</title>
+  <title>Conceptos Clave - FiltroJoven</title>
   <style>
-    body { font-family: Arial, sans-serif; line-height: 1.6; margin: 2rem auto; max-width: 960px; color: #222; }
-    h1, h2, h3 { color: #2a3d8f; }
-    code { background: #f4f4f4; padding: 0.15rem 0.35rem; border-radius: 4px; font-family: "Courier New", monospace; }
-    pre { background: #f4f4f4; padding: 1rem; border-radius: 6px; overflow-x: auto; }
-    li { margin-bottom: 0.4rem; }
+    body { font-family: Arial, sans-serif; margin: 2rem; line-height: 1.6; color: #222; }
+    h1, h2, h3 { color: #1a4a6a; }
+    ul { margin-left: 1.5rem; }
+    code { background: #f4f4f4; padding: 0.15rem 0.3rem; border-radius: 4px; }
   </style>
 </head>
 <body>
-  <h1>Conceptos clave para el proyecto de rejuvenecimiento facial con algoritmos genéticos</h1>
-  <p>Este documento resume los fundamentos teóricos y prácticos necesarios para comprender el código del repositorio y reproducir los experimentos.</p>
+  <h1>Conceptos Clave - Rejuvenecimiento Facial con Algoritmos Geneticos</h1>
+  <p>Esta guia resume los fundamentos necesarios para comprender el proyecto FiltroJoven y justificar cada componente dentro de un informe tecnico.</p>
 
-  <h2>1. Flujo general del sistema</h2>
+  <h2>1. Flujo general</h2>
   <ol>
-    <li><strong>Entrada</strong>: imagen de un rostro (carpeta <code>input_images/</code>).</li>
-    <li><strong>Detección y segmentación</strong>: <code>core/haar_detector.py</code> calcula el cuadro facial y máscaras para piel, ojos, labios y regiones a preservar.</li>
-    <li><strong>Transformación parametrizada</strong>: <code>transformations/face_manipulator.py</code> aplica filtros controlados por cinco parámetros continuos/discretos.</li>
-    <li><strong>Algoritmo genético</strong>: inicializa población, evalúa aptitud, aplica selección-cruce-mutación y repite durante varias generaciones.</li>
-    <li><strong>Salida</strong>: imagen rejuvenecida, parámetros óptimos y (opcionalmente) reportes del benchmark.</li>
+    <li>Entrada: fotografia frontal almacenada en <code>input_images/</code>.</li>
+    <li>Deteccion y segmentacion: modulos en <code>core/</code> calculan mascaras de piel y rasgos.</li>
+    <li>Transformacion parametrica: <code>transformations/face_manipulator.py</code> aplica filtros controlados por cinco parametros.</li>
+    <li>Algoritmo genetico: busca la mejor combinacion de parametros segun una funcion de aptitud.</li>
+    <li>Salida: imagen rejuvenecida, parametros optimos y registros numericos.</li>
   </ol>
 
-  <h2>2. Fundamentos de algoritmos genéticos</h2>
-  <ol>
-    <li><strong>Representación del individuo</strong>: genotipo (vector de parámetros) y fenotipo (imagen procesada).</li>
-    <li><strong>Población</strong>: conjunto de individuos (tamaño <code>--pop</code>); se preserva el mejor (elitismo).</li>
-    <li><strong>Funciones de aptitud</strong>:
-      <ul>
-        <li><code>original</code>: mezcla reducción de arrugas, preservación de bordes, uniformidad y similitud estructural.</li>
-        <li><code>ideal</code>: compara con una piel suavizada ideal y penaliza zonas planas.</li>
-        <li><code>color</code>: combina similitud de color en Lab y textura objetivo.</li>
-        <li>Las combinaciones están soportadas vía <code>WeightedCompositeFitness</code>.</li>
-      </ul>
-    </li>
-    <li><strong>Operadores genéticos</strong>:
-      <ul>
-        <li><strong>Selección</strong>: torneo, ruleta, ranking, SUS.</li>
-        <li><strong>Crossover</strong>: punto único, dos puntos, k-puntos, uniforme.</li>
-        <li><strong>Mutación</strong>: ruido gaussiano adaptado al rango de cada parámetro.</li>
-        <li><code>clip_params</code> asegura límites válidos.</li>
-      </ul>
-    </li>
-    <li><strong>Control de semillas</strong>: <code>run_genetic_algorithm()</code> recibe <code>seed</code> y sincroniza <code>random</code> y <code>numpy</code>.</li>
-    <li><strong>Métricas extra</strong>: historial de aptitud, diversidad poblacional (desviación estándar promedio) y duración por corrida.</li>
-  </ol>
-
-  <h2>3. Métricas de análisis</h2>
-  <ol>
-    <li><strong>Cuantitativas</strong>:
-      <ul>
-        <li>Mejor aptitud y varianza entre corridas (<code>ga_benchmark_summary.csv</code>).</li>
-        <li>Curvas de convergencia (<code>benchmark_results/figures/convergence_*.png</code>).</li>
-        <li>Diversidad poblacional (<code>diversity_*.png</code>).</li>
-      </ul>
-    </li>
-    <li><strong>Cualitativas</strong>:
-      <ul>
-        <li>Comparación visual de imágenes procesadas (<code>output_images/</code> o <code>benchmark_results/images/</code>).</li>
-        <li>Observación de rasgos frente a un ideal.</li>
-      </ul>
-    </li>
-    <li><strong>Registro</strong>:
-      <ul>
-        <li><code>ga_benchmark_runs.csv</code>: resultados por corrida (parámetros, métricas, historial).</li>
-        <li><code>ga_benchmark_summary.csv</code>: agregados por configuración.</li>
-        <li><code>ga_benchmark_history.csv</code>: series por generación.</li>
-      </ul>
-    </li>
-  </ol>
-
-  <h2>4. Transformaciones de imagen utilizadas</h2>
+  <h2>2. Representacion genetica</h2>
   <ul>
-    <li><strong>Filtro bilateral</strong>: suaviza la piel manteniendo bordes; parámetros <code>bilateral_d</code>, <code>sigma_color</code>, <code>sigma_space</code>.</li>
-    <li><strong>Corrección gamma</strong>: modifica luminancia mediante <code>gamma</code>.</li>
-    <li><strong>Enfoque selectivo</strong>: unsharp masking en regiones no piel u ojos/labios (<code>unsharp_amount</code>).</li>
-    <li><strong>Máscaras de conservación</strong>: garantizan nitidez en ojos, labios y fondo.</li>
+    <li>Genotipo: diccionario con <code>bilateral_d</code>, <code>sigma_color</code>, <code>sigma_space</code>, <code>gamma</code>, <code>unsharp_amount</code>.</li>
+    <li>Fenotipo: imagen resultante de aplicar <code>apply_transformation</code>.</li>
+    <li>Espacio de busqueda limitado por <code>PARAM_BOUNDS</code> para evitar artefactos visuales.</li>
   </ul>
 
-  <h2>5. Relación con los requisitos de la práctica</h2>
+  <h2>3. Funciones de aptitud</h2>
+  <p>Definidas en <code>ga/fitness_functions.py</code>:</p>
   <ul>
-    <li>Implementación básica del AG cubierta en <code>face_manipulator.py</code>.</li>
-    <li>Funciones de aptitud múltiples y composiciones (<code>ga/fitness_functions.py</code>).</li>
-    <li>Operadores variados en <code>ga/selection_operators.py</code> y <code>ga/crossover_operators.py</code>.</li>
-    <li>Benchmark sistemático (<code>experiments/benchmark.py</code>) con 10 corridas por combinación.</li>
-    <li>Gráficas de convergencia y diversidad cubren los análisis cuantitativos requeridos.</li>
-    <li>Imágenes y métricas disponibles para el análisis cualitativo y la discusión.</li>
+    <li><strong>original</strong>: reduce arrugas y preserva bordes.</li>
+    <li><strong>ideal</strong>: aproxima la piel a un suavizado de referencia manteniendo detalles finos.</li>
+    <li><strong>color</strong>: controla textura y luminosidad en espacio Lab.</li>
+    <li>Combinaciones ponderadas disponibles en <code>FITNESS_SPEC_REGISTRY</code>.</li>
   </ul>
 
-  <h2>6. Pasos sugeridos</h2>
-  <ol>
-    <li>Ejecutar el benchmark completo (ver <code>docs/benchmark_guide.md</code>).</li>
-    <li>Revisar CSV y figuras para el informe cuantitativo.</li>
-    <li>Comparar imágenes resultantes para el análisis visual.</li>
-    <li>Redactar el informe final: metodología, resultados, discusión y conclusiones.</li>
-  </ol>
+  <h2>4. Operadores geneticos</h2>
+  <ul>
+    <li>Seleccion: torneo, ruleta, ranking y SUS.</li>
+    <li>Cruce: punto unico, dos puntos, k puntos y uniforme.</li>
+    <li>Mutacion: ruido gaussiano con recorte mediante <code>clip_params</code>.</li>
+  </ul>
 
-  <p>Con estos conceptos y referencias podrás comprender el proyecto, explicar sus componentes y defender los resultados frente a los criterios de evaluación.</p>
+  <h2>5. Mecanismos de control</h2>
+  <ul>
+    <li>Semillas: <code>run_genetic_algorithm</code> sincroniza <code>random</code> y <code>numpy</code> para reproducibilidad.</li>
+    <li>Elitismo: el mejor individuo pasa a la siguiente generacion sin modificaciones.</li>
+    <li>Diversidad: <code>_population_diversity</code> mide la dispersion promedio de los parametros.</li>
+  </ul>
+
+  <h2>6. Metricas y registros</h2>
+  <ul>
+    <li><code>ga_benchmark_runs.csv</code>: resultados individuales con parametros, metricas y diversidad final.</li>
+    <li><code>ga_benchmark_summary.csv</code>: promedios y desviaciones agrupadas por combinacion.</li>
+    <li><code>ga_benchmark_history.csv</code>: series por generacion.</li>
+    <li>Figuras normalizadas en CDF 0-1 para comparar funciones de aptitud en una escala comun.</li>
+  </ul>
+
+  <h2>7. Transformaciones de imagen</h2>
+  <ul>
+    <li>Suavizado bilateral: reduce texturas manteniendo bordes.</li>
+    <li>Correccion gamma: ajusta la luminosidad global.</li>
+    <li>Unsharp masking selectivo: recupera nitidez en ojos, labios y zonas conservadas.</li>
+    <li>Mascaras: delimitan donde actua cada filtro y evitan halos.</li>
+  </ul>
+
+  <h2>8. Relacion con requisitos academicos</h2>
+  <p>El proyecto implementa un algoritmo genetico modular con multiples funciones de aptitud, operadores intercambiables, benchmark repetible con al menos diez corridas por configuracion, graficas de convergencia y diversidad, y reportes listos para documentar resultados.</p>
+
+  <p>Con estos conceptos puedes explicar el funcionamiento del proyecto, defender las decisiones de diseno y analizar los resultados experimentales con claridad.</p>
 </body>
 </html>

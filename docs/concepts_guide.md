@@ -1,107 +1,76 @@
-# Conceptos clave para el proyecto de rejuvenecimiento facial con algoritmos genéticos
+# Conceptos Clave - Rejuvenecimiento Facial con Algoritmos Geneticos
 
-Este documento resume los fundamentos teóricos y prácticos necesarios para comprender el código del repositorio y reproducir los experimentos.
+Esta guia resume los fundamentos teoricos y practicos necesarios para comprender el proyecto FiltroJoven y justificar cada componente en un informe tecnico.
 
-## 1. Flujo general del sistema
+## 1. Flujo general
 
-1. **Entrada**: imagen de un rostro (`input_images/`).
-2. **Detección y segmentación**: `core/haar_detector.py` calcula un cuadro facial y máscaras para piel, ojos, labios y regiones a preservar.
-3. **Transformación parametrizada**: `transformations/face_manipulator.py` aplica filtros (suavizado bilateral, ajuste de gamma y enfoque selectivo) controlados por cinco parámetros continuos/discretos.
-4. **Algoritmo genético (AG)**:
-   - Inicializa una población de individuos, cada uno con un conjunto de parámetros.
-   - Evalúa cada individuo mediante una **función de aptitud** diseñada para correlacionarse con “apariencia joven”.
-   - Repite selección → cruce → mutación → evaluación durante varias generaciones para optimizar la aptitud.
-5. **Salida**: imagen rejuvenecida y parámetros óptimos; los resultados opcionales se guardan bajo `output_images/` o `benchmark_results/images/`.
+1. **Entrada**: una fotografia frontal ubicada en `input_images/`.
+2. **Deteccion y segmentacion**: `core/haar_detector.py` y utilidades relacionadas calculan mascaras para piel, ojos y labios.
+3. **Transformacion parametrica**: `transformations/face_manipulator.py` aplica filtros controlados por cinco parametros continuos/discretos.
+4. **Algoritmo genetico**: explora el espacio de parametros buscando maximizar una funcion de aptitud.
+5. **Salida**: imagen rejuvenecida, parametros optimos y registros numericos para analisis.
 
-## 2. Fundamentos de algoritmos genéticos
+## 2. Representacion genetica
 
-1. **Representación del individuo**
-   - Genotipo: vector de parámetros (`bilateral_d`, `sigma_color`, `sigma_space`, `gamma`, `unsharp_amount`).
-   - Fenotipo: imagen resultante tras aplicar la transformación con esos parámetros.
+- **Genotipo**: diccionario con los parametros `bilateral_d`, `sigma_color`, `sigma_space`, `gamma`, `unsharp_amount`.
+- **Fenotipo**: imagen transformada tras aplicar `apply_transformation` con esos parametros.
+- **Espacio de busqueda**: cada parametro tiene limites definidos en `PARAM_BOUNDS` para asegurar resultados realistas.
 
-2. **Población y generación**
-   - Conjunto de individuos evaluados en cada iteración. El tamaño se define con `--pop`.
-   - Los individuos se mantienen en memoria y el mejor se preserva (elitismo).
+## 3. Funciones de aptitud
 
-3. **Funciones de aptitud (fitness)**
-   - **original**: pondera reducción de arrugas, preservación de bordes, uniformidad y similitud estructural (`ga/fitness_functions.py:18`).
-   - **ideal**: aproxima la piel a un referente suavizado, penalizando zonas planas y premiando bordes en ojos/labios.
-   - **color**: combina similitud de histograma en el espacio Lab y textura deseada.
-   - También existen combinaciones ponderadas mediante `WeightedCompositeFitness`.
+Ubicadas en `ga/fitness_functions.py`, miden que tan "joven" luce el rostro tras la transformacion.
 
-4. **Operadores genéticos**
-   - **Selección** (`ga/selection_operators.py`): torneo, ruleta, ranking y muestreo universal estocástico (SUS).
-   - **Crossover** (`ga/crossover_operators.py`): punto único, dos puntos, k-puntos y uniforme.
-   - **Mutación** (`ga/mutation_operators.py`): agrega ruido gaussiano controlado por la amplitud de cada parámetro.
-   - Todos los operadores actúan sobre diccionarios; `clip_params` asegura que los valores se mantengan dentro de límites físicos.
+- `original`: reduce arrugas, preserva bordes y mantiene similitud estructural con la imagen original.
+- `ideal`: acerca la piel a un suavizado de referencia manteniendo nitidez en ojos y labios.
+- `color`: regula textura y luminosidad en espacio Lab.
+- Composiciones ponderadas: `FITNESS_SPEC_REGISTRY` permite combinar las anteriores con pesos explicitos y normalizacion opcional.
 
-5. **Control de semillas**
-   - `run_genetic_algorithm()` recibe `seed` y sincroniza `random` y `numpy`. Esto vuelve las corridas reproducibles cuando el benchmark fija `base_seed`.
+Las funciones devuelven un valor positivo: mayor es mejor. Algunas tambien exponen metricas internas (por ejemplo SSIM o energia de bordes) para documentacion.
 
-6. **Métricas adicionales**
-   - **Historial de aptitud**: mejor aptitud histórica y mejor de la generación.
-   - **Diversidad poblacional**: desviación estándar promedio de los parámetros por generación.
-   - **Duración**: tiempo empleado en cada corrida (útil para reportes).
+## 4. Operadores geneticos
 
-## 3. Métricas de análisis
+### 4.1 Seleccion (`ga/selection_operators.py`)
 
-1. **Criterios cuantitativos**:
-   - Mejor aptitud alcanzada (por corrida/configuración).
-   - Varianza entre corridas (se observa en `ga_benchmark_summary.csv`).
-   - Curvas de convergencia (`benchmark_results/figures/convergence_*.png`).
-   - Diversidad poblacional (`diversity_*.png`), requisito explícito del PDF.
+- **Torneo**: elige el mejor de un subconjunto aleatorio.
+- **Ruleta**: probabilidad proporcional al fitness.
+- **Ranking**: distribuye probabilidades segun el orden.
+- **SUS**: variante de muestreo universal estocastico, garantiza cobertura equitativa.
 
-2. **Criterios cualitativos**:
-   - Calidad visual subjetiva: comparar imágenes guardadas (`output_images/` o `benchmark_results/images/`).
-   - Comparación con un ideal (máscara facial limpia) o contra otras configuraciones.
+### 4.2 Cruce (`ga/crossover_operators.py`)
 
-3. **Registro de resultados**:
-   - `ga_benchmark_runs.csv`: JSON en columnas `best_params`, `metrics`, `history`, `diversity_history`.
-   - `ga_benchmark_summary.csv`: promedios y desviaciones por combinación.
-   - `ga_benchmark_history.csv`: series temporales por corrida para análisis avanzado.
+- Punto unico, dos puntos, k puntos y uniforme. Todos generan descendencia mezclando diccionarios de parametros.
 
-## 4. Transformaciones de imagen utilizadas
+### 4.3 Mutacion (`ga/mutation_operators.py`)
 
-1. **Filtro bilateral**: suaviza la piel preservando bordes; controlado por `bilateral_d`, `sigma_color`, `sigma_space`.
-2. **Corrección gamma**: aclarado/oscurecimiento (`gamma`).
-3. **Enfoque selectivo (unsharp masking)**: refuerza bordes en zonas fuera de piel o en ojos/labios (`unsharp_amount`).
-4. **Máscara de conservación**: aseguran que ojos, labios y fondo se mantengan nítidos (`keep_mask`).
+- `gaussian_mutate` aplica ruido proporcional al rango de cada parametro y recorta a los limites validos mediante `clip_params`.
 
-Estas operaciones se aplican en `apply_transformation`, y las máscaras provienen de `compute_masks`.
+## 5. Mecanismos de control
 
-## 5. Relación con los requisitos de la práctica
+- **Semillas**: `run_genetic_algorithm` acepta `seed` y sincroniza `random` y `numpy`. El benchmark deriva una semilla distinta para cada corrida (`base_seed + run_id`) y posibilita reproducir experimentos.
+- **Elitismo**: el mejor individuo de cada generacion pasa directo a la siguiente, evitando retrocesos.
+- **Diversidad**: `_population_diversity` mide la desviacion estandar promedio de los parametros. Se registra por generacion para analizar convergencia prematura.
 
-1. **Implementación básica**:
-   - Representación → parámetros (sección 2.1).
-   - Transformación → `apply_transformation`.
-   - AG básico → `run_genetic_algorithm`.
+## 6. Metricas y registros
 
-2. **Funciones de aptitud múltiples**: tres variantes más combinaciones ponderadas (`ga/fitness_functions.py`).
+- `ga_benchmark_runs.csv`: estadisticos por corrida (fitness, parametros, diversidad final, tiempo).
+- `ga_benchmark_summary.csv`: medias y desviaciones agrupadas por fitness, seleccion, cruce y mutacion.
+- `ga_benchmark_history.csv`: series de `best_fitness`, `current_best` y `diversity` por generacion.
+- Figuras normalizadas (CDF 0-1) para comparar funciones de aptitud en una escala comun.
 
-3. **Operadores genéticos variados**: selección/cruce/mutación definidos en `ga/`.
+## 7. Transformaciones de imagen
 
-4. **Experimentación sistemática**:
-   - Benchmark configurable (`experiments/benchmark.py`).
-   - Ejecuta 10 corridas por combinación para evaluar estabilidad y varianza.
-   - Gráficas de convergencia y diversidad generadas automáticamente.
+Cada operacion contribuye a la percepcion de juventud:
+- **Suavizado bilateral**: reduce texturas en la piel sin perder bordes importantes.
+- **Correccion gamma**: ajusta la luminosidad general para evitar tonos apagados.
+- **Unsharp masking selectivo**: recupera nitidez en ojos, labios y zonas no tratadas.
+- **Mascaras**: permiten aplicar cada filtro en regiones especificas y evitar halos.
 
-5. **Análisis y evaluación**:
-   - Los CSV/figuras permiten elaborar los apartados cuantitativos.
-   - Imágenes guardadas sirven para evaluación visual y discusión cualitativa.
+## 8. Relacion con los requisitos academicos
 
-6. **Documentación**:
-   - `docs/benchmark_guide.md` explica el uso del benchmark.
-   - Este documento resume los conceptos teóricos exigidos.
+- Implementacion modular del algoritmo genetico con parametros claros.
+- Varias funciones de aptitud comparables en escala comun.
+- Operadores de seleccion, cruce y mutacion intercambiables.
+- Benchmark con al menos 10 corridas por combinacion, registros estadisticos y graficas de convergencia/diversidad.
+- Reportes automatizados listos para integrar en el documento final.
 
-## 6. Pasos sugeridos para entender y presentar resultados
-
-1. **Ejecutar el benchmark completo** (ver `docs/benchmark_guide.md`).
-2. **Revisar CSV y figuras** para completar el informe con datos cuantitativos.
-3. **Comparar imágenes resultado** para describir hallazgos visuales.
-4. **Redactar informe final**:
-   - Metodología (cómo se configuró el benchmark).
-   - Resultados (tablas y gráficas relevantes).
-   - Discusión (respuestas a las preguntas del PDF).
-   - Conclusiones y mejoras futuras.
-
-Con estos conceptos y referencias podrás comprender el proyecto, explicar sus componentes y defender los resultados frente a los criterios de evaluación del magíster.
+Con estos conceptos puedes explicar el funcionamiento del proyecto, justificar las decisiones de diseno y analizar los resultados experimentales de manera coherente.

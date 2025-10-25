@@ -2,277 +2,82 @@
 <html lang="es">
 <head>
   <meta charset="utf-8">
-  <title>Guía Detallada del Código - AgeReverser</title>
+  <title>Guia del Codigo - FiltroJoven</title>
   <style>
-    body { font-family: Arial, sans-serif; line-height: 1.7; margin: 2rem auto; max-width: 980px; color: #222; }
-    h1, h2, h3 { color: #1f3a93; }
-    pre { background: #f5f5f5; padding: 1rem; border-radius: 6px; overflow-x: auto; }
-    code { background: #f0f0f0; padding: 0.2rem 0.4rem; border-radius: 4px; font-family: "Courier New", monospace; }
-    hr { border: none; border-top: 1px solid #ddd; margin: 2.5rem 0; }
-    ul, ol { margin-left: 1.5rem; }
+    body { font-family: Arial, sans-serif; margin: 2rem; line-height: 1.6; color: #222; }
+    h1, h2, h3 { color: #1a4a6a; }
+    code { background: #f4f4f4; padding: 0.15rem 0.3rem; border-radius: 4px; }
+    pre { background: #f4f4f4; padding: 1rem; border-radius: 6px; overflow-x: auto; }
+    ul { margin-left: 1.5rem; }
   </style>
 </head>
 <body>
-  <h1>Guía detallada del código del proyecto “AgeReverser”</h1>
-  <p>Este documento recorre el código fuente principal siguiendo el flujo completo de ejecución, destacando fragmentos clave y explicando cómo se conectan entre sí para implementar el filtro de rejuvenecimiento facial mediante algoritmos genéticos.</p>
-  <hr>
+  <h1>Guia del Codigo - FiltroJoven</h1>
+  <p>Este documento resume los modulos principales del proyecto FiltroJoven y explica como interactuan para aplicar un filtro de rejuvenecimiento facial mediante algoritmos geneticos.</p>
 
   <h2>1. Punto de entrada (<code>main.py</code>)</h2>
-  <p>El script <code>main.py</code> expone una interfaz de línea de comandos que permite elegir la imagen de entrada, los parámetros del algoritmo genético y las variantes de fitness/selección/cruce/mutación.</p>
-  <pre><code># main.py
-parser = argparse.ArgumentParser(
-    description="Run a Genetic Algorithm to apply a 'younger' transformation to a face image.",
-    formatter_class=argparse.ArgumentDefaultsHelpFormatter
-)
-parser.add_argument("--image", type=str, default="old_person.jpg", ...)
-parser.add_argument("--fitness", type=str, default="original", choices=FITNESS_NAMES, ...)
-parser.add_argument("--selection", type=str, default="tournament", choices=SELECTION_MAP.keys(), ...)
-...
-img = load_image(input_path)
-fitness_func = fitness_functions.get_tracked_fitness(args.fitness)
-...
-result_img, best_individual = run_genetic_algorithm(...)
-save_image(output_path, result_img)
-</code></pre>
   <ul>
-    <li><strong>Argumentos</strong>: permiten replicar configuraciones desde consola, esenciales para el benchmark.</li>
-    <li><strong>Carga de imagen</strong> (<code>utils/image_utils.py</code>): valida la ruta y devuelve un <code>numpy.ndarray</code>.</li>
-    <li><strong>Selección de componentes del AG</strong>: los mapas conectan nombres legibles con funciones reales.</li>
-    <li><strong>Llamada principal</strong>: <code>run_genetic_algorithm</code> recibe la imagen y las funciones elegidas.</li>
-  </ul>
-  <hr>
-
-  <h2>2. Transformaciones y ejecución del AG (<code>transformations/face_manipulator.py</code>)</h2>
-  <p>Este módulo encapsula la lógica de máscaras faciales, filtros de rejuvenecimiento y el motor genético completo.</p>
-
-  <h3>2.1 Parámetros y utilitarios</h3>
-  <pre><code>PARAM_BOUNDS = {
-    "bilateral_d": (3, 19),
-    "sigma_color": (20.0, 150.0),
-    "sigma_space": (10.0, 100.0),
-    "gamma": (0.85, 1.25),
-    "unsharp_amount": (0.0, 1.0),
-}
-
-def sample_params(rng=None):
-    return {
-        "bilateral_d": int(rng.integers(...)) if rng else int(np.random.randint(...)),
-        "sigma_color": float(rng.uniform(...)) if rng else float(np.random.uniform(...)),
-        ...
-    }
-</code></pre>
-  <ul>
-    <li><code>PARAM_BOUNDS</code> define los límites físicos de cada parámetro.</li>
-    <li><code>sample_params</code> soporta tanto el generador reproducible como el global.</li>
-    <li><code>_population_diversity</code> calcula la desviación estándar promedio de los parámetros.</li>
+    <li>Interfaz de linea de comandos para una corrida unica del algoritmo genetico.</li>
+    <li>Argumentos clave: <code>--image</code>, <code>--output-dir</code>, <code>--gens</code>, <code>--pop</code>, <code>--fitness</code>, <code>--selection</code>, <code>--crossover</code>, <code>--mutation</code>, <code>--seed</code>.</li>
+    <li><code>utils.image_utils.load_image</code> valida y carga la fotografia.</li>
+    <li>Mapea nombres legibles a funciones en <code>ga/</code> para fitness, seleccion, cruce y mutacion.</li>
+    <li>Llama a <code>run_genetic_algorithm</code> y guarda el resultado en <code>output_images/</code>.</li>
   </ul>
 
-  <h3>2.2 Aplicación de la transformación</h3>
-  <pre><code>def apply_transformation(img_bgr, masks, params):
-    img = img_bgr.copy()
-    if params["bilateral_d"] > 0:
-        smooth = cv2.bilateralFilter(img, ...)
-        alpha = cv2.merge([feathered_mask] * 3)
-        img = (alpha * smooth + (1.0 - alpha) * img).astype(np.uint8)
+  <h2>2. Transformaciones y algoritmo genetico (<code>transformations/face_manipulator.py</code>)</h2>
+  <h3>2.1 Mascaras faciales</h3>
+  <p><code>compute_masks</code> genera <code>skin_mask</code>, <code>keep_mask</code> y <code>feathered_mask</code> para controlar donde se aplican los filtros.</p>
 
-    inv_gamma = 1.0 / max(1e-3, params["gamma"])
-    table = (np.linspace(0, 1, 256) ** inv_gamma) * 255.0
-    img = cv2.LUT(img, table.astype(np.uint8))
+  <h3>2.2 Transformacion parametrizada</h3>
+  <p><code>apply_transformation</code> ejecuta suavizado bilateral, correccion gamma y unsharp masking selectivo. Los limites de los parametros estan definidos en <code>PARAM_BOUNDS</code>.</p>
 
-    blur = cv2.GaussianBlur(img, (0, 0), sigmaX=1.0)
-    sharp = cv2.addWeighted(img, 1 + params["unsharp_amount"], blur, -params["unsharp_amount"], 0)
-    img = np.where(cv2.merge([keep_mask]*3) > 0, sharp, img).astype(np.uint8)
-    return img
-</code></pre>
+  <h3>2.3 Motor genetico</h3>
   <ul>
-    <li>Suavizado bilateral con mezcla controlada por máscara de piel.</li>
-    <li>Corrección gamma para ajustar luminancia.</li>
-    <li>Enfoque selectivo (unsharp masking) en regiones preservadas.</li>
+    <li><code>run_genetic_algorithm</code> inicializa poblacion, aplica elitismo y ejecuta seleccion, cruce y mutacion durante <code>iters</code> generaciones.</li>
+    <li><code>sample_params</code> toma valores aleatorios respetando los limites declarados.</li>
+    <li><code>_evaluate_candidate</code> aplica la transformacion y calcula fitness, historiales y diversidad.</li>
+    <li><code>_population_diversity</code> mide la dispersion promedio de los parametros.</li>
   </ul>
 
-  <h3>2.3 Motor del algoritmo genético</h3>
-  <pre><code>def run_genetic_algorithm(..., iters=20, pop_size=24, track_history=False, seed=None):
-    if seed is not None:
-        random.seed(seed)
-        np.random.seed(seed)
-        rng = np.random.default_rng(seed)
-    else:
-        rng = None
+  <h2>3. Operadores y funciones de aptitud (<code>ga/</code>)</h2>
+  <h3>3.1 Fitness</h3>
+  <p><code>ga/fitness_functions.py</code> define <code>original</code>, <code>ideal</code>, <code>color</code> y combinaciones ponderadas mediante <code>WeightedCompositeFitness</code>. <code>get_tracked_fitness</code> agrega registro de metricas.</p>
 
-    masks = compute_masks(img_bgr)
-    pop = []
-    for _ in range(pop_size):
-        candidate = _evaluate_candidate(..., params=sample_params(rng=rng))
-        pop.append(candidate)
-
-    best_ever = _clone_candidate(max(pop, key=lambda ind: ind["fitness"]))
-    diversity = _population_diversity(pop)
-    history = [{"generation": 0, "best_fitness": best_ever["fitness"], "diversity": diversity, ...}]
-
-    for gen in range(iters):
-        new_pop = [_clone_candidate(best_ever)]
-        while len(new_pop) &lt; pop_size:
-            p1 = selection_func(pop); p2 = selection_func(pop)
-            child_params = crossover_func(p1["params"], p2["params"])
-            mutated_params = mutation_func(child_params, PARAM_BOUNDS)
-            new_pop.append(_evaluate_candidate(..., params=mutated_params))
-
-        pop = new_pop
-        current_best = max(pop, key=lambda ind: ind["fitness"])
-        if current_best["fitness"] > best_ever["fitness"]:
-            best_ever = _clone_candidate(current_best)
-        diversity = _population_diversity(pop)
-        history.append({"generation": gen + 1, "best_fitness": best_ever["fitness"], "diversity": diversity, ...})
-
-    final_img = apply_transformation(img_bgr, masks, best_ever["params"])
-    result = _clone_candidate(best_ever)
-    result["history"] = history
-    result["diversity_history"] = [entry["diversity"] for entry in history]
-    result["final_diversity"] = diversity
-    return final_img, result
-</code></pre>
-  <ul>
-    <li>Semillas garantizan reproducibilidad.</li>
-    <li>Elitismo preserva al mejor individuo.</li>
-    <li>Histórico almacena aptitud y diversidad.</li>
-  </ul>
-  <hr>
-
-  <h2>3. Componentes del AG (<code>ga/</code>)</h2>
-
-  <h3>3.1 Funciones de aptitud</h3>
-  <pre><code>def original_fitness(orig_bgr, proc_bgr, masks):
-    wrinkle_gain = (wr_c_o - wr_c_p) + 0.5 * (wr_g_o - wr_g_p)
-    edge_pres = (edge_p_el - edge_o_el) + 0.5 * (edge_p_ns - edge_o_ns)
-    even_gain = var_skin_o - var_skin_p
-    blur_pen = max(0.0, (15.0 - laplacian_variance(gray_p, skin_only)) * 0.05)
-    ssim_ns = ssim_lite(orig_bgr, proc_bgr, mask=non_skin)
-    return float(1.20 * wrinkle_gain + 0.80 * edge_pres + 0.60 * even_gain + 0.50 * ssim_ns - 0.80 * blur_pen)
-</code></pre>
-  <p>Las demás funciones siguen un esquema similar; <code>TrackedFitness</code> registra el último valor y <code>WeightedCompositeFitness</code> permite combinaciones.</p>
-
-  <h3>3.2 Selección</h3>
-  <pre><code>def tournament_selection(population, k=3):
-    tournament_size = min(k, len(population))
-    selected = random.sample(population, tournament_size)
-    return max(selected, key=lambda ind: ind["fitness"])
-
-def roulette_wheel_selection(population):
-    total_fitness = sum(ind["fitness"] for ind in population)
-    ...
-    return random.choices(population, weights=weights, k=1)[0]
-</code></pre>
+  <h3>3.2 Seleccion</h3>
+  <p><code>ga/selection_operators.py</code> incluye torneo, ruleta, ranking y SUS.</p>
 
   <h3>3.3 Cruce</h3>
-  <pre><code>def uniform_crossover(p1_params, p2_params, mix_prob=0.5):
-    child_params = {}
-    for key in p1_params:
-        child_params[key] = p1_params[key] if random.random() &lt; mix_prob else p2_params[key]
-    return child_params
-</code></pre>
+  <p><code>ga/crossover_operators.py</code> implementa cruces de punto unico, dos puntos, k puntos y uniforme sobre diccionarios de parametros.</p>
 
-  <h3>3.4 Mutación</h3>
-  <pre><code>def gaussian_mutate(params, param_bounds, rate=0.25):
-    res = dict(params)
-    for k in res:
-        if random.random() &lt; rate:
-            lo, hi = param_bounds[k]
-            span = hi - lo
-            res[k] += random.gauss(0, span * 0.1)
-    return res
-</code></pre>
-  <hr>
+  <h3>3.4 Mutacion</h3>
+  <p><code>ga/mutation_operators.py</code> aplica ruido gaussiano y usa <code>clip_params</code> para mantener los limites.</p>
 
-  <h2>4. Utilidades y detección (<code>utils/</code>, <code>core/</code>)</h2>
+  <h2>4. Benchmark experimental (<code>experiments/benchmark.py</code>)</h2>
   <ul>
-    <li><strong>Imagen</strong>: <code>utils/image_utils.py</code> carga y guarda imágenes con mensajes claros.</li>
-    <li><strong>Métricas</strong>: <code>utils/metrics.py</code> implementa SSIM, Laplaciano, Sobel, Canny y Gabor.</li>
-    <li><strong>Detección facial</strong>: <code>core/haar_detector.py</code> usa Haar cascades y heurísticas HSV para máscaras.</li>
+    <li>Registros de configuracion: <code>FITNESS_SPEC_REGISTRY</code>, <code>SELECTION_REGISTRY</code>, <code>CROSSOVER_REGISTRY</code>, <code>MUTATION_REGISTRY</code>.</li>
+    <li>Distribuye tareas con <code>ThreadPoolExecutor</code> usando semillas derivadas de <code>base_seed</code>.</li>
+    <li>Genera CSV: <code>ga_benchmark_runs.csv</code>, <code>ga_benchmark_summary.csv</code>, <code>ga_benchmark_history.csv</code>.</li>
+    <li>Produce figuras: <code>fitness_boxplot_cdf.png</code>, <code>heatmap_&lt;fitness&gt;_cdf.png</code>, <code>convergence_&lt;fitness&gt;_cdf.png</code>, <code>convergence_all_cdf.png</code>, <code>diversity_&lt;fitness&gt;.png</code>.</li>
+    <li><code>generate_report</code> crea <code>benchmark_report.md</code> con tablas y rutas relativas a las figuras.</li>
   </ul>
-  <hr>
 
-  <h2>5. Benchmark y experimentación (<code>experiments/benchmark.py</code>)</h2>
-  <h3>5.1 Registro de combinaciones</h3>
-  <pre><code>FITNESS_SPEC_REGISTRY = {
-    "original": {"type": "single", "target": "original", "label": "original"},
-    "combo_all": {
-        "type": "combo",
-        "weights": {"original": 0.34, "ideal": 0.33, "color": 0.33},
-        "label": "combo(all)",
-    },
-    ...
-}
-</code></pre>
+  <h2>5. Utilidades de soporte</h2>
+  <ul>
+    <li><code>utils/image_utils.py</code>: carga, guardado, conversiones y escalado de imagenes.</li>
+    <li><code>utils/metrics.py</code>: SSIM, Laplaciano, contadores de bordes y energia de textura.</li>
+    <li><code>utils/display_utils.py</code>: herramientas para visualizar comparaciones.</li>
+    <li><code>core/haar_detector.py</code>: deteccion de rostro con Haar cascades y mascaras base.</li>
+  </ul>
 
-  <h3>5.2 Ejecución por tarea</h3>
-  <pre><code>def execute_task(task):
-    fitness_callable = task["factory"]()
-    final_img, best = run_genetic_algorithm(
-        img_bgr=image,
-        fitness_func=fitness_callable,
-        selection_func=task["selection_func"],
-        crossover_func=task["crossover_func"],
-        mutation_func=task["mutation_func"],
-        iters=args.gens,
-        pop_size=args.pop,
-        track_history=True,
-        verbose=False,
-        seed=task["seed"],
-    )
-    record = {
-        "best_fitness": float(best["fitness"]),
-        "best_params": to_json(best["params"]),
-        "history": to_json(best.get("history", [])),
-        "diversity_history": to_json(best.get("diversity_history", [])),
-        "final_diversity": float(best.get("final_diversity", 0.0)),
-        "duration_sec": duration,
-        ...
-    }
-    return record
-</code></pre>
-
-  <h3>5.3 Reportes y figuras</h3>
-  <pre><code>df = pd.DataFrame.from_records(records)
-summary_df = df.groupby(...).agg(mean_fitness=("best_fitness", "mean"), ...)
-history_df = extract_history(df)
-figure_paths = []
-figure_paths.extend(plot_convergence(history_df, figures_dir))
-figure_paths.extend(plot_diversity(history_df, figures_dir))
-report_path = generate_report(...)
-</code></pre>
-  <p>El benchmark genera CSV, figuras y un reporte en Markdown que resume los resultados.</p>
-  <hr>
-
-  <h2>6. Flujo estándar de ejecución</h2>
+  <h2>6. Flujo resumido de ejecucion</h2>
   <ol>
-    <li>
-      <strong>Corrida manual</strong>:
-      <pre><code>python main.py --image old_person.jpg --fitness original --selection tournament --crossover uniform --gens 20 --pop 24
-</code></pre>
-    </li>
-    <li>
-      <strong>Benchmark completo</strong>:
-      <pre><code>.\venv\Scripts\python.exe experiments/benchmark.py `
-    --runs 10 --gens 20 --pop 24 --save-images `
-    --fitness original ideal color `
-    --selection tournament roulette rank sus `
-    --crossover single_point two_point k_point uniform `
-    --mutation gaussian
-</code></pre>
-    </li>
-    <li>
-      <strong>Análisis</strong>: revisar CSV, figuras, reporte e imágenes generadas en <code>benchmark_results/</code>.
-    </li>
+    <li>Carga de imagen y calculo de mascaras.</li>
+    <li>Inicializacion de la poblacion con <code>sample_params</code>.</li>
+    <li>Evaluacion y evolucion del algoritmo genetico.</li>
+    <li>Guardado de la mejor imagen y registro de metricas.</li>
+    <li>Integracion con el benchmark para generar CSV, figuras y reportes.</li>
   </ol>
-  <hr>
 
-  <h2>7. Cómo aprovechar esta guía</h2>
-  <ul>
-    <li><strong>Estudiantes</strong>: seguir las secciones en orden para entender cómo cada archivo contribuye al objetivo.</li>
-    <li><strong>Revisión por pares</strong>: usar los fragmentos como referencia rápida para identificar funciones críticas.</li>
-    <li><strong>Documentación</strong>: citar fragmentos al redactar el informe final y justificar decisiones técnicas.</li>
-  </ul>
-
-  <p>Con esta guía, cualquier lector puede recorrer el proyecto de forma lógica, comprender los componentes esenciales y replicar los experimentos con confianza.</p>
+  <p>Con esta guia puedes ubicar rapidamente las funciones relevantes, comprender el flujo de datos y extender el proyecto de forma coherente con la organizacion actual del repositorio.</p>
 </body>
 </html>

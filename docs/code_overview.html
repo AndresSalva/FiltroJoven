@@ -1,83 +1,269 @@
 <!DOCTYPE html>
 <html lang="es">
-<head>
-  <meta charset="utf-8">
-  <title>Guia del Codigo - FiltroJoven</title>
-  <style>
-    body { font-family: Arial, sans-serif; margin: 2rem; line-height: 1.6; color: #222; }
-    h1, h2, h3 { color: #1a4a6a; }
-    code { background: #f4f4f4; padding: 0.15rem 0.3rem; border-radius: 4px; }
-    pre { background: #f4f4f4; padding: 1rem; border-radius: 6px; overflow-x: auto; }
-    ul { margin-left: 1.5rem; }
-  </style>
-</head>
-<body>
-  <h1>Guia del Codigo - FiltroJoven</h1>
-  <p>Este documento resume los modulos principales del proyecto FiltroJoven y explica como interactuan para aplicar un filtro de rejuvenecimiento facial mediante algoritmos geneticos.</p>
+  <head>
+    <meta charset="utf-8" />
+    <title>Visita Rapida al Codigo</title>
+    <style>
+      :root {
+        --bg: #f4f7fb;
+        --panel: #ffffff;
+        --accent: #274b7a;
+        --accent-soft: #dce7f7;
+        --text: #1d2733;
+        --muted: #526375;
+        --border: #d1dae6;
+        --shadow: rgba(20, 40, 70, 0.08);
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        line-height: 1.7;
+      }
+      header {
+        background: linear-gradient(130deg, #3f83f8, var(--accent));
+        color: #fff;
+        text-align: center;
+        padding: 3.2rem 2rem;
+      }
+      header h1 {
+        margin: 0 0 0.4rem 0;
+        font-size: 2.2rem;
+        font-weight: 700;
+      }
+      header p {
+        margin: 0;
+        font-size: 1.05rem;
+        opacity: 0.85;
+      }
+      main {
+        max-width: 960px;
+        margin: -48px auto 70px auto;
+        padding: 0 26px;
+      }
+      .card {
+        background: var(--panel);
+        border-radius: 14px;
+        padding: 28px;
+        margin-bottom: 26px;
+        box-shadow: 0 18px 44px var(--shadow);
+      }
+      .card h2 {
+        margin-top: 0;
+        color: var(--accent);
+        font-size: 1.6rem;
+      }
+      .card h3 {
+        color: var(--muted);
+        font-size: 1.12rem;
+        margin-top: 1.6rem;
+      }
+      p {
+        margin: 0 0 1rem 0;
+      }
+      ul {
+        margin: 0 0 1rem 0;
+        padding-left: 1.2rem;
+      }
+      code {
+        font-family: "Fira Code", Consolas, monospace;
+        background: var(--accent-soft);
+        color: var(--accent);
+        padding: 2px 6px;
+        border-radius: 6px;
+        font-size: 0.95rem;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 1.2rem 0;
+        font-size: 0.95rem;
+      }
+      th,
+      td {
+        border: 1px solid var(--border);
+        padding: 9px 11px;
+        text-align: left;
+        vertical-align: top;
+      }
+      th {
+        background: var(--accent-soft);
+        color: var(--accent);
+        font-size: 0.82rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+      }
+      footer {
+        text-align: center;
+        color: var(--muted);
+        font-size: 0.9rem;
+        padding: 2.2rem 1rem 3.2rem 1rem;
+      }
+      @media (max-width: 640px) {
+        header {
+          padding: 2.7rem 1.7rem;
+        }
+        header h1 {
+          font-size: 1.9rem;
+        }
+        .card {
+          padding: 22px;
+        }
+        table {
+          font-size: 0.9rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Visita Rapida al Codigo</h1>
+      <p>Mapa de modulos y recomendaciones para extender el proyecto</p>
+    </header>
 
-  <h2>1. Punto de entrada (<code>main.py</code>)</h2>
-  <ul>
-    <li>Interfaz de linea de comandos para una corrida unica del algoritmo genetico.</li>
-    <li>Argumentos clave: <code>--image</code>, <code>--output-dir</code>, <code>--gens</code>, <code>--pop</code>, <code>--fitness</code>, <code>--selection</code>, <code>--crossover</code>, <code>--mutation</code>, <code>--seed</code>.</li>
-    <li><code>utils.image_utils.load_image</code> valida y carga la fotografia.</li>
-    <li>Mapea nombres legibles a funciones en <code>ga/</code> para fitness, seleccion, cruce y mutacion.</li>
-    <li>Llama a <code>run_genetic_algorithm</code> y guarda el resultado en <code>output_images/</code>.</li>
-  </ul>
+    <main>
+      <article class="card">
+        <h2>1. Piezas principales</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Archivo</th>
+              <th>Rol</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>main.py</code></td>
+              <td>Punto de entrada para una sola corrida; expone CLI para imagen, fitness y operadores.</td>
+            </tr>
+            <tr>
+              <td><code>transformations/face_manipulator.py</code></td>
+              <td>Mascaras faciales, transformacion parametrica y motor del algoritmo genetico.</td>
+            </tr>
+            <tr>
+              <td><code>ga/fitness_functions.py</code></td>
+              <td>Funciones <code>original</code>, <code>ideal</code>, <code>color</code> y combinaciones ponderadas.</td>
+            </tr>
+            <tr>
+              <td><code>ga/selection_operators.py</code></td>
+              <td>Torneo, ruleta, rank y SUS.</td>
+            </tr>
+            <tr>
+              <td><code>ga/crossover_operators.py</code></td>
+              <td>Cruces single-point, two-point, k-point y uniform.</td>
+            </tr>
+            <tr>
+              <td><code>ga/mutation_operators.py</code></td>
+              <td>Mutacion gaussiana y recorte de parametros via <code>clip_params</code>.</td>
+            </tr>
+            <tr>
+              <td><code>experiments/benchmark.py</code></td>
+              <td>Barrido masivo, generacion de CSV, figuras y reportes.</td>
+            </tr>
+            <tr>
+              <td><code>utils/</code></td>
+              <td>Funciones de imagen, metricas y visualizacion.</td>
+            </tr>
+            <tr>
+              <td><code>core/</code></td>
+              <td>Deteccion facial y mascaras base (Haar cascades, landmarks).</td>
+            </tr>
+          </tbody>
+        </table>
+      </article>
 
-  <h2>2. Transformaciones y algoritmo genetico (<code>transformations/face_manipulator.py</code>)</h2>
-  <h3>2.1 Mascaras faciales</h3>
-  <p><code>compute_masks</code> genera <code>skin_mask</code>, <code>keep_mask</code> y <code>feathered_mask</code> para controlar donde se aplican los filtros.</p>
+      <article class="card">
+        <h2>2. Flujo tipico (<code>main.py</code>)</h2>
+        <ol>
+          <li>Parseo de argumentos (imagen, fitness, operadores, generaciones, poblacion, semilla).</li>
+          <li>Carga de la imagen con <code>utils.image_utils.load_image</code>.</li>
+          <li>Mapeo de nombres a funciones reales (<code>FITNESS_NAMES</code>, <code>SELECTION_MAP</code>, etc.).</li>
+          <li>Ejecucion de <code>run_genetic_algorithm</code> con mascaras precalculadas.</li>
+          <li>Guardado de la mejor imagen en <code>output_images/</code> y log de parametros en consola.</li>
+        </ol>
+      </article>
 
-  <h3>2.2 Transformacion parametrizada</h3>
-  <p><code>apply_transformation</code> ejecuta suavizado bilateral, correccion gamma y unsharp masking selectivo. Los limites de los parametros estan definidos en <code>PARAM_BOUNDS</code>.</p>
+      <article class="card">
+        <h2>3. Transformacion y GA (<code>transformations/face_manipulator.py</code>)</h2>
+        <ul>
+          <li>
+            <strong><code>PARAM_BOUNDS</code>:</strong> limites para <code>bilateral_d</code>, <code>sigma_color</code>,
+            <code>sigma_space</code>, <code>gamma</code>, <code>unsharp_amount</code>.
+          </li>
+          <li>
+            <strong><code>sample_params</code>:</strong> muestreo de parametros dentro de los limites (deterministico si
+            se provee generador).
+          </li>
+          <li>
+            <strong><code>apply_transformation</code>:</strong> aplica suavizado bilateral, correccion gamma y unsharp
+            masking selectivo.
+          </li>
+          <li>
+            <strong><code>run_genetic_algorithm</code>:</strong> inicializa poblacion, aplica seleccion, cruce, mutacion
+            y elitismo; puede devolver historial completo para analisis.
+          </li>
+        </ul>
+      </article>
 
-  <h3>2.3 Motor genetico</h3>
-  <ul>
-    <li><code>run_genetic_algorithm</code> inicializa poblacion, aplica elitismo y ejecuta seleccion, cruce y mutacion durante <code>iters</code> generaciones.</li>
-    <li><code>sample_params</code> toma valores aleatorios respetando los limites declarados.</li>
-    <li><code>_evaluate_candidate</code> aplica la transformacion y calcula fitness, historiales y diversidad.</li>
-    <li><code>_population_diversity</code> mide la dispersion promedio de los parametros.</li>
-  </ul>
+      <article class="card">
+        <h2>4. Fitness y operadores (<code>ga/</code>)</h2>
+        <ul>
+          <li>
+            <strong>Fitness:</strong> `fitness_functions.py` define las funciones base y herramientas para combinarlas
+            con pesos.
+          </li>
+          <li>
+            <strong>Seleccion:</strong> `selection_operators.py` implementa torneo, ruleta, rank y SUS.
+          </li>
+          <li>
+            <strong>Cruce:</strong> `crossover_operators.py` mezcla diccionarios de parametros (single, two, k, uniform).
+          </li>
+          <li>
+            <strong>Mutacion:</strong> `mutation_operators.py` aplica ruido gaussiano proporcional al rango de cada
+            parametro y recorta valores.
+          </li>
+        </ul>
+      </article>
 
-  <h2>3. Operadores y funciones de aptitud (<code>ga/</code>)</h2>
-  <h3>3.1 Fitness</h3>
-  <p><code>ga/fitness_functions.py</code> define <code>original</code>, <code>ideal</code>, <code>color</code> y combinaciones ponderadas mediante <code>WeightedCompositeFitness</code>. <code>get_tracked_fitness</code> agrega registro de metricas.</p>
+      <article class="card">
+        <h2>5. Benchmark (<code>experiments/benchmark.py</code>)</h2>
+        <ol>
+          <li>Genera combinaciones segun la CLI y ejecuta el GA con semillas unicas.</li>
+          <li>Guarda imagenes finales opcionalmente y registra cada corrida.</li>
+          <li>Construye <code>ga_benchmark_runs.csv</code>, <code>ga_benchmark_summary.csv</code> y <code>ga_benchmark_history.csv</code>.</li>
+          <li>Produce boxplots, heatmaps y curvas de convergencia/diversidad.</li>
+          <li>Genera un reporte autogenerado con configuracion y rutas relevantes.</li>
+        </ol>
+      </article>
 
-  <h3>3.2 Seleccion</h3>
-  <p><code>ga/selection_operators.py</code> incluye torneo, ruleta, ranking y SUS.</p>
+      <article class="card">
+        <h2>6. Extensiones recomendadas</h2>
+        <ul>
+          <li>
+            <strong>Nuevas funciones de aptitud:</strong> añadelas a `fitness_functions.py`, registra el nombre en los
+            mapas y actualiza la CLI si deseas incluirlas en el benchmark.
+          </li>
+          <li>
+            <strong>Operadores personalizados:</strong> agrega la funcion en el modulo correspondiente y enlazala en los
+            diccionarios utilizados por `main.py` y el benchmark.
+          </li>
+          <li>
+            <strong>Transformaciones adicionales:</strong> ajusta `PARAM_BOUNDS` y `apply_transformation`, cuidando la
+            conversion final a `uint8`.
+          </li>
+          <li>
+            <strong>Depuracion rapida:</strong> usa pocas generaciones/poblacion o el benchmark con `--runs 1 --gens 2`
+            para reproducir problemas sin esperar el barrido completo.
+          </li>
+        </ul>
+      </article>
+    </main>
 
-  <h3>3.3 Cruce</h3>
-  <p><code>ga/crossover_operators.py</code> implementa cruces de punto unico, dos puntos, k puntos y uniforme sobre diccionarios de parametros.</p>
-
-  <h3>3.4 Mutacion</h3>
-  <p><code>ga/mutation_operators.py</code> aplica ruido gaussiano y usa <code>clip_params</code> para mantener los limites.</p>
-
-  <h2>4. Benchmark experimental (<code>experiments/benchmark.py</code>)</h2>
-  <ul>
-    <li>Registros de configuracion: <code>FITNESS_SPEC_REGISTRY</code>, <code>SELECTION_REGISTRY</code>, <code>CROSSOVER_REGISTRY</code>, <code>MUTATION_REGISTRY</code>.</li>
-    <li>Distribuye tareas con <code>ThreadPoolExecutor</code> usando semillas derivadas de <code>base_seed</code>.</li>
-    <li>Genera CSV: <code>ga_benchmark_runs.csv</code>, <code>ga_benchmark_summary.csv</code>, <code>ga_benchmark_history.csv</code>.</li>
-    <li>Produce figuras: <code>fitness_boxplot_cdf.png</code>, <code>heatmap_&lt;fitness&gt;_cdf.png</code>, <code>convergence_&lt;fitness&gt;_cdf.png</code>, <code>convergence_all_cdf.png</code>, <code>diversity_&lt;fitness&gt;.png</code>.</li>
-    <li><code>generate_report</code> crea <code>benchmark_report.md</code> con tablas y rutas relativas a las figuras.</li>
-  </ul>
-
-  <h2>5. Utilidades de soporte</h2>
-  <ul>
-    <li><code>utils/image_utils.py</code>: carga, guardado, conversiones y escalado de imagenes.</li>
-    <li><code>utils/metrics.py</code>: SSIM, Laplaciano, contadores de bordes y energia de textura.</li>
-    <li><code>utils/display_utils.py</code>: herramientas para visualizar comparaciones.</li>
-    <li><code>core/haar_detector.py</code>: deteccion de rostro con Haar cascades y mascaras base.</li>
-  </ul>
-
-  <h2>6. Flujo resumido de ejecucion</h2>
-  <ol>
-    <li>Carga de imagen y calculo de mascaras.</li>
-    <li>Inicializacion de la poblacion con <code>sample_params</code>.</li>
-    <li>Evaluacion y evolucion del algoritmo genetico.</li>
-    <li>Guardado de la mejor imagen y registro de metricas.</li>
-    <li>Integracion con el benchmark para generar CSV, figuras y reportes.</li>
-  </ol>
-
-  <p>Con esta guia puedes ubicar rapidamente las funciones relevantes, comprender el flujo de datos y extender el proyecto de forma coherente con la organizacion actual del repositorio.</p>
-</body>
+    <footer>Visita rapida al codigo · Octubre 2025</footer>
+  </body>
 </html>

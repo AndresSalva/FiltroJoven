@@ -1,77 +1,205 @@
 <!DOCTYPE html>
 <html lang="es">
-<head>
-  <meta charset="utf-8">
-  <title>Conceptos Clave - FiltroJoven</title>
-  <style>
-    body { font-family: Arial, sans-serif; margin: 2rem; line-height: 1.6; color: #222; }
-    h1, h2, h3 { color: #1a4a6a; }
-    ul { margin-left: 1.5rem; }
-    code { background: #f4f4f4; padding: 0.15rem 0.3rem; border-radius: 4px; }
-  </style>
-</head>
-<body>
-  <h1>Conceptos Clave - Rejuvenecimiento Facial con Algoritmos Geneticos</h1>
-  <p>Esta guia resume los fundamentos necesarios para comprender el proyecto FiltroJoven y justificar cada componente dentro de un informe tecnico.</p>
+  <head>
+    <meta charset="utf-8" />
+    <title>Conceptos Clave del Proyecto</title>
+    <style>
+      :root {
+        --bg: #f4f7fb;
+        --panel: #ffffff;
+        --accent: #274b7a;
+        --accent-soft: #dce7f7;
+        --text: #1d2733;
+        --muted: #526375;
+        --border: #d1dae6;
+        --shadow: rgba(20, 40, 70, 0.08);
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        line-height: 1.7;
+      }
+      header {
+        background: linear-gradient(130deg, #3f83f8, var(--accent));
+        color: #fff;
+        text-align: center;
+        padding: 3.2rem 2rem;
+      }
+      header h1 {
+        margin: 0 0 0.4rem 0;
+        font-size: 2.2rem;
+        font-weight: 700;
+      }
+      header p {
+        margin: 0;
+        font-size: 1.05rem;
+        opacity: 0.85;
+      }
+      main {
+        max-width: 960px;
+        margin: -48px auto 70px auto;
+        padding: 0 26px;
+      }
+      .card {
+        background: var(--panel);
+        border-radius: 14px;
+        padding: 28px;
+        margin-bottom: 26px;
+        box-shadow: 0 18px 44px var(--shadow);
+      }
+      .card h2 {
+        margin-top: 0;
+        color: var(--accent);
+        font-size: 1.6rem;
+      }
+      .card h3 {
+        color: var(--muted);
+        font-size: 1.12rem;
+        margin-top: 1.6rem;
+      }
+      p { margin: 0 0 1rem 0; }
+      ul, ol { margin: 0 0 1rem 0; padding-left: 1.25rem; }
+      code {
+        font-family: "Fira Code", Consolas, monospace;
+        background: var(--accent-soft);
+        color: var(--accent);
+        padding: 2px 6px;
+        border-radius: 6px;
+        font-size: 0.95rem;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 1.2rem 0;
+        font-size: 0.95rem;
+      }
+      th, td {
+        border: 1px solid var(--border);
+        padding: 9px 11px;
+        text-align: left;
+        vertical-align: top;
+      }
+      th {
+        background: var(--accent-soft);
+        color: var(--accent);
+        font-size: 0.82rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+      }
+      footer {
+        text-align: center;
+        color: var(--muted);
+        font-size: 0.9rem;
+        padding: 2.2rem 1rem 3.2rem 1rem;
+      }
+      @media (max-width: 640px) {
+        header { padding: 2.7rem 1.7rem; }
+        header h1 { font-size: 1.9rem; }
+        .card { padding: 22px; }
+        table { font-size: 0.9rem; }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Conceptos Clave del Proyecto</h1>
+      <p>Resumen teorico y practico del filtro de rejuvenecimiento</p>
+    </header>
 
-  <h2>1. Flujo general</h2>
-  <ol>
-    <li>Entrada: fotografia frontal almacenada en <code>input_images/</code>.</li>
-    <li>Deteccion y segmentacion: modulos en <code>core/</code> calculan mascaras de piel y rasgos.</li>
-    <li>Transformacion parametrica: <code>transformations/face_manipulator.py</code> aplica filtros controlados por cinco parametros.</li>
-    <li>Algoritmo genetico: busca la mejor combinacion de parametros segun una funcion de aptitud.</li>
-    <li>Salida: imagen rejuvenecida, parametros optimos y registros numericos.</li>
-  </ol>
+    <main>
+      <article class="card">
+        <h2>1. Flujo general</h2>
+        <ol>
+          <li>Entrada de una fotografia frontal en <code>input_images/</code>.</li>
+          <li>Deteccion facial y mascaras generadas en <code>core/</code>.</li>
+          <li>Transformacion parametrica aplicada por <code>apply_transformation</code>.</li>
+          <li>Busqueda con algoritmo genetico para optimizar la funcion de aptitud.</li>
+          <li>Salida: imagen rejuvenecida, parametros y metricas para analisis.</li>
+        </ol>
+      </article>
 
-  <h2>2. Representacion genetica</h2>
-  <ul>
-    <li>Genotipo: diccionario con <code>bilateral_d</code>, <code>sigma_color</code>, <code>sigma_space</code>, <code>gamma</code>, <code>unsharp_amount</code>.</li>
-    <li>Fenotipo: imagen resultante de aplicar <code>apply_transformation</code>.</li>
-    <li>Espacio de busqueda limitado por <code>PARAM_BOUNDS</code> para evitar artefactos visuales.</li>
-  </ul>
+      <article class="card">
+        <h2>2. Representacion del individuo</h2>
+        <ul>
+          <li><strong>Genotipo:</strong> parametros <code>bilateral_d</code>, <code>sigma_color</code>, <code>sigma_space</code>, <code>gamma</code>, <code>unsharp_amount</code>.</li>
+          <li><strong>Fenotipo:</strong> imagen resultante tras ejecutar <code>apply_transformation</code>.</li>
+          <li><strong>Espacio de busqueda:</strong> acotado por <code>PARAM_BOUNDS</code> para mantener transformaciones realistas.</li>
+        </ul>
+      </article>
 
-  <h2>3. Funciones de aptitud</h2>
-  <p>Definidas en <code>ga/fitness_functions.py</code>:</p>
-  <ul>
-    <li><strong>original</strong>: reduce arrugas y preserva bordes.</li>
-    <li><strong>ideal</strong>: aproxima la piel a un suavizado de referencia manteniendo detalles finos.</li>
-    <li><strong>color</strong>: controla textura y luminosidad en espacio Lab.</li>
-    <li>Combinaciones ponderadas disponibles en <code>FITNESS_SPEC_REGISTRY</code>.</li>
-  </ul>
+      <article class="card">
+        <h2>3. Funciones de aptitud</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Funcion</th>
+              <th>Objetivo principal</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>original</code></td>
+              <td>Reducir arrugas y preservar detalle estructural (bordes, rasgos faciales).</td>
+            </tr>
+            <tr>
+              <td><code>ideal</code></td>
+              <td>Suavizar la piel hacia una referencia difusa manteniendo nitidez en ojos y labios.</td>
+            </tr>
+            <tr>
+              <td><code>color</code></td>
+              <td>Uniformizar textura y tonalidad en espacio Lab sin perder naturalidad.</td>
+            </tr>
+          </tbody>
+        </table>
+        <p>Las combinaciones ponderadas tambien estan disponibles y todas las metricas se normalizan a escala CDF 0-1.</p>
+      </article>
 
-  <h2>4. Operadores geneticos</h2>
-  <ul>
-    <li>Seleccion: torneo, ruleta, ranking y SUS.</li>
-    <li>Cruce: punto unico, dos puntos, k puntos y uniforme.</li>
-    <li>Mutacion: ruido gaussiano con recorte mediante <code>clip_params</code>.</li>
-  </ul>
+      <article class="card">
+        <h2>4. Operadores geneticos</h2>
+        <ul>
+          <li><strong>Seleccion:</strong> torneo, ruleta, rank y SUS.</li>
+          <li><strong>Cruce:</strong> single-point, two-point, k-point, uniform.</li>
+          <li><strong>Mutacion:</strong> ruido gaussiano (con recorte mediante <code>clip_params</code>).</li>
+          <li><strong>Elitismo:</strong> el mejor individuo pasa directo a la siguiente generacion.</li>
+        </ul>
+      </article>
 
-  <h2>5. Mecanismos de control</h2>
-  <ul>
-    <li>Semillas: <code>run_genetic_algorithm</code> sincroniza <code>random</code> y <code>numpy</code> para reproducibilidad.</li>
-    <li>Elitismo: el mejor individuo pasa a la siguiente generacion sin modificaciones.</li>
-    <li>Diversidad: <code>_population_diversity</code> mide la dispersion promedio de los parametros.</li>
-  </ul>
+      <article class="card">
+        <h2>5. Medicion y metricas</h2>
+        <ul>
+          <li><strong>best_fitness:</strong> calidad numerica de la transformacion.</li>
+          <li><strong>Historial:</strong> <code>history</code> y <code>current_best</code> registran la evolucion por generacion.</li>
+          <li><strong>Diversidad:</strong> desviacion tipica media de los parametros de la poblacion.</li>
+          <li><strong>Duracion:</strong> tiempo de cada corrida en segundos.</li>
+          <li><strong>Normalizacion:</strong> resultados comparables gracias a la conversion a percentiles (CDF 0-1).</li>
+        </ul>
+      </article>
 
-  <h2>6. Metricas y registros</h2>
-  <ul>
-    <li><code>ga_benchmark_runs.csv</code>: resultados individuales con parametros, metricas y diversidad final.</li>
-    <li><code>ga_benchmark_summary.csv</code>: promedios y desviaciones agrupadas por combinacion.</li>
-    <li><code>ga_benchmark_history.csv</code>: series por generacion.</li>
-    <li>Figuras normalizadas en CDF 0-1 para comparar funciones de aptitud en una escala comun.</li>
-  </ul>
+      <article class="card">
+        <h2>6. Benchmark y analisis</h2>
+        <p>
+          El barrido masivo cuantifica estabilidad y varianza entre corridas. <code>ga_benchmark_summary.csv</code>
+          resume promedios, desviaciones y percentiles para cada combinacion; las figuras generadas ilustran convergencia,
+          rendimiento y diversidad. El informe complementario <code>docs/benchmark_assignment_report.md</code>
+          sintetiza los hallazgos y destaca la configuracion visualmente superior (<code>color</code> + torneo + k-point).
+        </p>
+      </article>
 
-  <h2>7. Transformaciones de imagen</h2>
-  <ul>
-    <li>Suavizado bilateral: reduce texturas manteniendo bordes.</li>
-    <li>Correccion gamma: ajusta la luminosidad global.</li>
-    <li>Unsharp masking selectivo: recupera nitidez en ojos, labios y zonas conservadas.</li>
-    <li>Mascaras: delimitan donde actua cada filtro y evitan halos.</li>
-  </ul>
+      <article class="card">
+        <h2>7. Extensiones sugeridas</h2>
+        <ul>
+          <li>Agregar nuevas funciones de aptitud (p. ej., basadas en landmarks o aprendizaje automatico).</li>
+          <li>Explorar mutacion adaptativa o algoritmos multiobjetivo para equilibrar nitidez vs. suavizado.</li>
+          <li>Optimizar calculos costosos mediante cache o muestreo parcial de pixeles.</li>
+          <li>Integrar evaluaciones subjetivas para ajustar pesos de forma automatica.</li>
+        </ul>
+      </article>
+    </main>
 
-  <h2>8. Relacion con requisitos academicos</h2>
-  <p>El proyecto implementa un algoritmo genetico modular con multiples funciones de aptitud, operadores intercambiables, benchmark repetible con al menos diez corridas por configuracion, graficas de convergencia y diversidad, y reportes listos para documentar resultados.</p>
-
-  <p>Con estos conceptos puedes explicar el funcionamiento del proyecto, defender las decisiones de diseno y analizar los resultados experimentales con claridad.</p>
-</body>
+    <footer>Conceptos clave del proyecto · Octubre 2025</footer>
+  </body>
 </html>

@@ -1,100 +1,261 @@
 <!DOCTYPE html>
 <html lang="es">
-<head>
-  <meta charset="utf-8">
-  <title>Benchmark de Algoritmos Geneticos - Guia Detallada</title>
-  <style>
-    body { font-family: Arial, sans-serif; margin: 2rem; line-height: 1.6; color: #222; }
-    h1, h2, h3 { color: #1a4a6a; }
-    code { background: #f4f4f4; padding: 0.15rem 0.3rem; border-radius: 4px; }
-    pre { background: #f4f4f4; padding: 1rem; border-radius: 6px; overflow-x: auto; }
-    table { border-collapse: collapse; width: 100%; margin: 1rem 0; }
-    th, td { border: 1px solid #ccc; padding: 0.5rem; text-align: left; }
-    th { background: #f0f6fb; }
-    ul { margin-left: 1.5rem; }
-  </style>
-</head>
-<body>
-  <h1>Benchmark de Algoritmos Geneticos - Guia Detallada</h1>
-  <p>Este documento describe el funcionamiento del script <code>experiments/benchmark.py</code>, los argumentos disponibles y los productos que genera para evaluar el rendimiento del algoritmo genetico de rejuvenecimiento facial.</p>
+  <head>
+    <meta charset="utf-8" />
+    <title>Guia Practica del Benchmark</title>
+    <style>
+      :root {
+        --bg: #f4f7fb;
+        --panel: #ffffff;
+        --accent: #274b7a;
+        --accent-soft: #dce7f7;
+        --text: #1d2733;
+        --muted: #526375;
+        --border: #d1dae6;
+        --shadow: rgba(20, 40, 70, 0.08);
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        line-height: 1.7;
+      }
+      header {
+        background: linear-gradient(130deg, #3f83f8, var(--accent));
+        color: #fff;
+        text-align: center;
+        padding: 3.2rem 2rem;
+      }
+      header h1 {
+        margin: 0 0 0.4rem 0;
+        font-size: 2.2rem;
+        font-weight: 700;
+      }
+      header p {
+        margin: 0;
+        font-size: 1.05rem;
+        opacity: 0.85;
+      }
+      main {
+        max-width: 960px;
+        margin: -48px auto 70px auto;
+        padding: 0 26px;
+      }
+      .card {
+        background: var(--panel);
+        border-radius: 14px;
+        padding: 28px;
+        margin-bottom: 26px;
+        box-shadow: 0 18px 44px var(--shadow);
+      }
+      .card h2 {
+        margin-top: 0;
+        color: var(--accent);
+        font-size: 1.6rem;
+      }
+      .card h3 {
+        color: var(--muted);
+        font-size: 1.12rem;
+        margin-top: 1.6rem;
+      }
+      p {
+        margin: 0 0 1rem 0;
+      }
+      ul {
+        margin: 0 0 1rem 0;
+        padding-left: 1.2rem;
+      }
+      code {
+        font-family: "Fira Code", Consolas, monospace;
+        background: var(--accent-soft);
+        color: var(--accent);
+        padding: 2px 6px;
+        border-radius: 6px;
+        font-size: 0.95rem;
+      }
+      pre {
+        background: var(--accent-soft);
+        border-radius: 10px;
+        padding: 14px 16px;
+        overflow-x: auto;
+        font-family: "Fira Code", Consolas, monospace;
+        line-height: 1.5;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 1.2rem 0;
+        font-size: 0.95rem;
+      }
+      th,
+      td {
+        border: 1px solid var(--border);
+        padding: 9px 11px;
+        text-align: left;
+        vertical-align: top;
+      }
+      th {
+        background: var(--accent-soft);
+        color: var(--accent);
+        font-size: 0.82rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+      }
+      footer {
+        text-align: center;
+        color: var(--muted);
+        font-size: 0.9rem;
+        padding: 2.2rem 1rem 3.2rem 1rem;
+      }
+      @media (max-width: 640px) {
+        header {
+          padding: 2.7rem 1.7rem;
+        }
+        header h1 {
+          font-size: 1.9rem;
+        }
+        .card {
+          padding: 22px;
+        }
+        table {
+          font-size: 0.9rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Guia Practica del Benchmark</h1>
+      <p>Resumen operativo de experiments/benchmark.py</p>
+    </header>
 
-  <h2>1. Objetivo del benchmark</h2>
-  <p>El benchmark automatiza la evaluacion sistematica de combinaciones de funciones de aptitud, operadores de seleccion, operadores de cruce y operadores de mutacion. Cada configuracion se ejecuta varias veces con semillas distintas, se registran metricas numericas y se producen reportes y figuras para analizar convergencia, rendimiento y diversidad poblacional.</p>
+    <main>
+      <article class="card">
+        <h2>1. Objetivo rapido</h2>
+        <p>
+          El benchmark genera y evalua todas las combinaciones de funciones de aptitud, selecciones y cruces que se
+          indiquen. Produce datos cuantitativos y material visual para entender el comportamiento real del algoritmo
+          genetico y documentar los hallazgos sin esfuerzo manual.
+        </p>
+      </article>
 
-  <h2>2. Requisitos previos</h2>
-  <ol>
-    <li>
-      <strong>Dependencias.</strong> Instala las bibliotecas con:
-      <pre><code>python -m pip install -r requirements.txt</code></pre>
-      <p>Activa el entorno virtual <code>venv</code> antes de instalar y ejecutar comandos.</p>
-    </li>
-    <li>
-      <strong>Imagenes de entrada.</strong> Coloca las fotos en <code>input_images/</code>. El script usa <code>old_person.jpg</code> por defecto y puede cambiarse con <code>--image</code>.
-    </li>
-    <li>
-      <strong>Directorio de resultados.</strong> <code>--output-dir</code> crea una carpeta con subdirectorios <code>data/</code>, <code>figures/</code>, <code>images/</code> (opcional) y <code>reports/</code>.
-    </li>
-  </ol>
-
-  <h2>3. Argumentos principales</h2>
-  <p>La funcion <code>parse_args()</code> define los parametros configurables:</p>
-  <table>
-    <thead>
-      <tr><th>Flag</th><th>Descripcion</th></tr>
-    </thead>
-    <tbody>
-      <tr><td><code>--image</code></td><td>Archivo dentro de <code>input_images/</code>.</td></tr>
-      <tr><td><code>--input-dir</code>, <code>--output-dir</code></td><td>Directorios de entrada y salida.</td></tr>
-      <tr><td><code>--runs</code></td><td>Repeticiones por configuracion.</td></tr>
-      <tr><td><code>--gens</code>, <code>--pop</code></td><td>Generaciones y tamano de poblacion.</td></tr>
-      <tr><td><code>--fitness</code></td><td>Claves dentro de <code>FITNESS_SPEC_REGISTRY</code>.</td></tr>
-      <tr><td><code>--selection</code>, <code>--crossover</code>, <code>--mutation</code></td><td>Operadores a combinar.</td></tr>
-      <tr><td><code>--calibration-samples</code></td><td>Muestras para estimar media y desviacion.</td></tr>
-      <tr><td><code>--base-seed</code></td><td>Semilla base para derivar las semillas de cada corrida.</td></tr>
-      <tr><td><code>--save-images</code></td><td>Guarda la imagen final de cada corrida.</td></tr>
-    </tbody>
-  </table>
-  <p><strong>Reproducibilidad.</strong> Cada tarea usa <code>seed = base_seed + run_id</code>; el valor se propaga a <code>random</code> y <code>numpy</code> para reproducir los resultados.</p>
-
-  <h2>4. Flujo del script</h2>
-  <ol>
-    <li><strong>Carga de recursos.</strong> <code>load_image()</code> abre la foto y <code>compute_masks()</code> calcula las mascaras faciales reutilizadas en todas las corridas.</li>
-    <li><strong>Definicion de combinaciones.</strong> <code>FITNESS_SPEC_REGISTRY</code> describe <code>original</code>, <code>ideal</code>, <code>color</code> y variantes compuestas. Las combinaciones se generan con <code>itertools.product</code>.</li>
-    <li><strong>Ejecucion paralela.</strong> Cada corrida se programa como tarea, construye la funcion de fitness, ejecuta <code>run_genetic_algorithm()</code>, guarda la imagen si se pide y acumula metricas.</li>
-    <li><strong>Persistencia.</strong> Se generan <code>ga_benchmark_runs.csv</code>, <code>ga_benchmark_summary.csv</code> y <code>ga_benchmark_history.csv</code>.</li>
-    <li><strong>Figuras y reporte.</strong> El script produce boxplots, heatmaps, curvas de convergencia y diversidad, y el archivo <code>benchmark_report.md</code>.</li>
-  </ol>
-
-  <h2>5. Comandos utiles</h2>
-  <h3>Corrida rapida de sanidad</h3>
-  <pre><code>python -u experiments/benchmark.py --image tuto.jpg --runs 1 --gens 2 --pop 6 `
+      <article class="card">
+        <h2>2. Ejecucion basica</h2>
+        <ol>
+          <li>Instala dependencias: <code>pip install -r requirements.txt</code>.</li>
+          <li>Coloca la imagen de prueba en <code>input_images/</code>.</li>
+          <li>
+            Corrida rapida de validacion:
+            <pre><code>python -u experiments/benchmark.py --image tuto.jpg --runs 1 --gens 2 --pop 6 `
     --fitness original ideal color --selection tournament --crossover single_point `
-    --mutation gaussian --calibration-samples 10 --output-dir benchmark_results_quick</code></pre>
-
-  <h3>Barrido completo sugerido</h3>
-  <pre><code>python -u experiments/benchmark.py --image tuto.jpg --runs 10 --gens 20 --pop 24 `
+    --mutation gaussian --output-dir benchmark_results_quick
+</code></pre>
+          </li>
+          <li>
+            Barrido completo recomendado:
+            <pre><code>python -u experiments/benchmark.py --image tuto.jpg --runs 10 --gens 20 --pop 24 `
     --fitness original ideal color `
     --selection tournament roulette rank sus `
     --crossover single_point two_point k_point uniform `
-    --mutation gaussian --calibration-samples 40 --save-images --workers 8 `
-    --output-dir benchmark_results</code></pre>
+    --mutation gaussian --calibration-samples 40 --save-images `
+    --output-dir benchmark_results
+</code></pre>
+          </li>
+        </ol>
+        <p>
+          Reduce corridas o generaciones durante la iteracion. Activa <code>--save-images</code> solo cuando necesites
+          los resultados finales.
+        </p>
+      </article>
 
-  <h2>6. Revision de resultados</h2>
-  <ul>
-    <li><strong>CSV.</strong> Revisa <code>ga_benchmark_runs.csv</code> para parametros e historiales, y confirma <code>runs = 10</code> en <code>ga_benchmark_summary.csv</code>.</li>
-    <li><strong>Figuras.</strong> Comprueba que existan boxplots, heatmaps, curvas de convergencia (CDF 0-1) y graficas de diversidad.</li>
-    <li><strong>Reporte.</strong> <code>benchmark_report.md</code> recopila estadisticos normalizados y rutas relativas a las figuras.</li>
-    <li><strong>Imagenes.</strong> Con <code>--save-images</code>, cada resultado se guarda en <code>images/&lt;fitness&gt;/</code>.</li>
-  </ul>
+      <article class="card">
+        <h2>3. Carpetas y archivos</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Ruta</th>
+              <th>Contenido y uso</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>benchmark_results_*/data/</code></td>
+              <td>
+                CSV con corridas individuales (<code>ga_benchmark_runs.csv</code>), resumenes (<code>ga_benchmark_summary.csv</code>) e historiales (<code>ga_benchmark_history.csv</code>).
+              </td>
+            </tr>
+            <tr>
+              <td><code>benchmark_results_*/figures/</code></td>
+              <td>Boxplots, heatmaps, curvas de convergencia y diversidad en escala CDF 0-1.</td>
+            </tr>
+            <tr>
+              <td><code>benchmark_results_*/reports/</code></td>
+              <td><code>benchmark_report.md</code>: configuracion, top combinaciones y listado de figuras.</td>
+            </tr>
+            <tr>
+              <td><code>benchmark_results_*/images/&lt;fitness&gt;/</code></td>
+              <td>
+                Imagen final de cada corrida (solo si se usa <code>--save-images</code>). Ignorada en Git para evitar
+                peso.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </article>
 
-  <h2>7. Consejos finales</h2>
-  <ul>
-    <li>Ajusta <code>--runs</code>, <code>--gens</code> y <code>--pop</code> para exploraciones rapidas.</li>
-    <li>Incrementa <code>--calibration-samples</code> cuando agregues nuevas funciones de aptitud.</li>
-    <li>Documenta semillas, argumentos y rutas de salida para reproducir resultados.</li>
-    <li>Consulta el log de consola para seguir el progreso y detectar advertencias.</li>
-  </ul>
+      <article class="card">
+        <h2>4. Interpretacion rapida</h2>
+        <ul>
+          <li>
+            <strong>Promedio de rendimiento:</strong> ordena <code>ga_benchmark_summary.csv</code> por
+            <code>mean_cdf</code>; valores cercanos a 1 indican percentiles altos.
+          </li>
+          <li>
+            <strong>Estabilidad:</strong> revisa <code>std_fitness</code> y <code>std_cdf</code>. Valores bajos implican
+            corridas consistentes.
+          </li>
+          <li>
+            <strong>Convergencia:</strong> las figuras <code>convergence_*_cdf.png</code> muestran cuan rapido progresa
+            cada configuracion.
+          </li>
+          <li>
+            <strong>Diversidad:</strong> <code>diversity_*</code> permite detectar estancamientos o exceso de
+            exploracion.
+          </li>
+          <li>
+            <strong>Revision visual:</strong> usa las imagenes finales para comparar resultados cualitativos.
+          </li>
+        </ul>
+      </article>
 
-  <p>Con esta guia puedes ejecutar, entender y reportar el benchmark manteniendo coherencia con el codigo fuente.</p>
-</body>
+      <article class="card">
+        <h2>5. Sugerencias finales</h2>
+        <ul>
+          <li>
+            Realiza corridas cortas sin <code>--save-images</code> hasta confirmar dependencias y rutas antes del barrido
+            definitivo.
+          </li>
+          <li>
+            Complementa esta guia con <code>docs/benchmark_assignment_report.md</code> y
+            <code>docs/benchmark_details.md</code> para un informe completo.
+          </li>
+          <li>
+            Si agregas nuevos operadores o funciones de aptitud, actualiza los registros en
+            <code>experiments/benchmark.py</code> y repite el benchmark.
+          </li>
+          <li>
+            Evita versionar las imagenes generadas; el <code>.gitignore</code> ya excluye
+            <code>benchmark_results_*/images/</code>.
+          </li>
+        </ul>
+      </article>
+    </main>
+
+    <footer>Guia rapida del benchmark · Octubre 2025</footer>
+  </body>
 </html>

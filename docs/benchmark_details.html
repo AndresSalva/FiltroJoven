@@ -2,21 +2,19 @@
 <html lang="es">
   <head>
     <meta charset="utf-8" />
-    <title>Guía Detallada del Benchmark GA</title>
+    <title>Guia Detallada del Benchmark GA</title>
     <style>
       :root {
-        --bg: #f5f7fb;
+        --bg: #f4f7fb;
         --panel: #ffffff;
-        --accent: #2c528b;
-        --accent-soft: #e2ecf8;
-        --text: #1a202c;
-        --muted: #4a5568;
-        --border: #d6dde6;
-        --shadow: rgba(17, 34, 64, 0.08);
+        --accent: #274b7a;
+        --accent-soft: #dce7f7;
+        --text: #1d2733;
+        --muted: #526375;
+        --border: #d1dae6;
+        --shadow: rgba(20, 40, 70, 0.08);
       }
-      * {
-        box-sizing: border-box;
-      }
+      * { box-sizing: border-box; }
       body {
         margin: 0;
         font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -25,51 +23,45 @@
         line-height: 1.7;
       }
       header {
-        background: radial-gradient(circle at top, #3b82f6, var(--accent));
+        background: linear-gradient(130deg, #3f83f8, var(--accent));
         color: #fff;
-        padding: 3.8rem 2rem;
         text-align: center;
+        padding: 3.2rem 2rem;
       }
       header h1 {
         margin: 0 0 0.4rem 0;
-        font-size: 2.4rem;
+        font-size: 2.2rem;
         font-weight: 700;
       }
       header p {
         margin: 0;
-        font-size: 1.1rem;
+        font-size: 1.05rem;
         opacity: 0.85;
       }
       main {
         max-width: 960px;
-        margin: -48px auto 64px auto;
+        margin: -48px auto 70px auto;
         padding: 0 26px;
       }
       .card {
         background: var(--panel);
         border-radius: 14px;
-        padding: 32px;
-        margin-bottom: 28px;
-        box-shadow: 0 18px 45px var(--shadow);
+        padding: 28px;
+        margin-bottom: 26px;
+        box-shadow: 0 18px 44px var(--shadow);
       }
       .card h2 {
         margin-top: 0;
         color: var(--accent);
-        font-size: 1.75rem;
+        font-size: 1.6rem;
       }
       .card h3 {
         color: var(--muted);
-        font-size: 1.2rem;
-        margin-top: 1.8rem;
+        font-size: 1.12rem;
+        margin-top: 1.6rem;
       }
-      p {
-        margin: 0 0 1.1rem 0;
-      }
-      ul,
-      ol {
-        padding-left: 1.3rem;
-        margin: 0 0 1.1rem 0;
-      }
+      p { margin: 0 0 1rem 0; }
+      ul, ol { margin: 0 0 1rem 0; padding-left: 1.25rem; }
       code {
         font-family: "Fira Code", Consolas, monospace;
         background: var(--accent-soft);
@@ -78,114 +70,73 @@
         border-radius: 6px;
         font-size: 0.95rem;
       }
-      pre {
-        background: var(--accent-soft);
-        border-radius: 10px;
-        padding: 14px 16px;
-        overflow-x: auto;
-        font-family: "Fira Code", Consolas, monospace;
-        line-height: 1.5;
-      }
       table {
         width: 100%;
         border-collapse: collapse;
         margin: 1.2rem 0;
-        font-size: 0.98rem;
+        font-size: 0.95rem;
       }
-      th,
-      td {
+      th, td {
         border: 1px solid var(--border);
-        padding: 10px 12px;
+        padding: 9px 11px;
         text-align: left;
         vertical-align: top;
       }
       th {
         background: var(--accent-soft);
         color: var(--accent);
+        font-size: 0.82rem;
         font-weight: 600;
         text-transform: uppercase;
-        font-size: 0.85rem;
+        letter-spacing: 0.03em;
       }
       footer {
         text-align: center;
         color: var(--muted);
         font-size: 0.9rem;
-        padding: 2.2rem 1rem 3rem 1rem;
+        padding: 2.2rem 1rem 3.2rem 1rem;
       }
       @media (max-width: 640px) {
-        header {
-          padding: 3rem 1.7rem;
-        }
-        header h1 {
-          font-size: 2rem;
-        }
-        .card {
-          padding: 24px;
-        }
-        table {
-          font-size: 0.92rem;
-        }
+        header { padding: 2.7rem 1.7rem; }
+        header h1 { font-size: 1.9rem; }
+        .card { padding: 22px; }
+        table { font-size: 0.9rem; }
       }
     </style>
   </head>
   <body>
     <header>
-      <h1>Guía Detallada del Benchmark GA</h1>
-      <p>Cómo se ejecuta, qué produce y cómo interpretar sus resultados</p>
+      <h1>Guia Detallada del Benchmark GA</h1>
+      <p>Descripcion completa del flujo, salidas y analisis</p>
     </header>
 
     <main>
       <article class="card">
-        <h2>1. Propósito general</h2>
+        <h2>1. Proposito general</h2>
         <p>
-          El script <code>experiments/benchmark.py</code> automatiza la evaluación del algoritmo genético que impulsa el
-          filtro de rejuvenecimiento facial. Permite responder de manera objetiva cuáles combinaciones de operadores
-          ofrecen mejor rendimiento, qué tan estables son y cómo evoluciona la población a lo largo de las generaciones.
+          El benchmark automatiza la evaluacion de multiples configuraciones del algoritmo genetico. Su objetivo es
+          comparar operadores, medir estabilidad entre corridas y entender la evolucion de aptitud y diversidad.
         </p>
       </article>
 
       <article class="card">
         <h2>2. Flujo operativo</h2>
         <ol>
-          <li>
-            <strong>Carga y preparación.</strong> Se abre la imagen objetivo y se calculan máscaras faciales para aplicar
-            la transformación de manera localizada.
-          </li>
-          <li>
-            <strong>Definición de configuraciones.</strong> Se combinan todas las funciones de aptitud, operadores de
-            selección y cruces indicados en la CLI. En el barrido completo se evaluaron 48 configuraciones.
-          </li>
-          <li>
-            <strong>Ejecución multihilo.</strong> Cada combinación se repite <code>--runs</code> veces (10 en el estudio
-            final) con semillas distintas derivadas del <code>base_seed</code>.
-          </li>
-          <li>
-            <strong>Registro de resultados.</strong> Se almacenan aptitudes, parámetros, historiales por generación,
-            diversidad poblacional y duración de cada corrida; opcionalmente se guardan las imágenes finales.
-          </li>
-          <li>
-            <strong>Generación de salidas.</strong> El benchmark produce CSV, figuras comparativas y un reporte
-            Markdown listo para revisión rápida.
-          </li>
+          <li><strong>Carga y preparacion.</strong> Se abre la imagen, se generan mascaras de piel y detalle.</li>
+          <li><strong>Definicion de configuraciones.</strong> Se combinan todas las funciones de aptitud, selecciones y cruces indicados en CLI.</li>
+          <li><strong>Ejecucion multihilo.</strong> Cada combinacion corre `--runs` veces con semillas derivadas de <code>base_seed</code>.</li>
+          <li><strong>Registro de resultados.</strong> Se almacenan aptitudes, parametros, historiales y diversidad; opcionalmente se guardan imagenes.</li>
+          <li><strong>Generacion de salidas.</strong> Se producen CSV, figuras y un reporte Markdown listo para revisar.</li>
         </ol>
       </article>
 
       <article class="card">
-        <h2>3. Métricas y archivos de salida</h2>
+        <h2>3. Metricas y archivos de salida</h2>
         <h3>3.1 Datos (CSV)</h3>
         <ul>
-          <li>
-            <strong>ga_benchmark_runs.csv:</strong> detalle por corrida (aptitud, parámetros, historial, diversidad y
-            duración).
-          </li>
-          <li>
-            <strong>ga_benchmark_summary.csv:</strong> agregados por combinación, con medias y desviaciones de cada
-            métrica, además de valores normalizados (<code>mean_cdf</code>, <code>mean_z</code>).
-          </li>
-          <li>
-            <strong>ga_benchmark_history.csv:</strong> evolución por generación (mejor aptitud, mejor histórico y
-            diversidad).
-          </li>
+          <li><strong>ga_benchmark_runs.csv:</strong> detalle por corrida (operadores, aptitud, parametros, historiales, duracion).</li>
+          <li><strong>ga_benchmark_summary.csv:</strong> promedios y desviaciones por combinacion, con valores normalizados (<code>mean_cdf</code>, <code>mean_z</code>).</li>
+          <li><strong>ga_benchmark_history.csv:</strong> serie por generacion para reconstruir convergencia y diversidad.</li>
         </ul>
 
         <h3>3.2 Figuras (PNG)</h3>
@@ -193,98 +144,70 @@
           <thead>
             <tr>
               <th>Archivo</th>
-              <th>Qué muestra</th>
-              <th>Cómo interpretarlo</th>
+              <th>Que muestra</th>
+              <th>Interpretacion</th>
             </tr>
           </thead>
           <tbody>
             <tr>
               <td><code>fitness_boxplot_cdf.png</code></td>
-              <td>Distribución de la mejor aptitud normalizada por fitness y selección.</td>
-              <td>Destaca configuraciones con percentiles altos y baja varianza.</td>
+              <td>Distribucion de la mejor aptitud normalizada (CDF 0-1) por fitness y seleccion.</td>
+              <td>Resalta combinaciones con percentiles altos y baja varianza.</td>
             </tr>
             <tr>
               <td><code>heatmap_*_cdf.png</code></td>
-              <td>Promedio de CDF por selección × cruce para cada fitness.</td>
-              <td>Los colores más intensos indican combinaciones superiores.</td>
+              <td>Promedio de CDF por seleccion x cruce.</td>
+              <td>Colores brillantes indican operadores superiores.</td>
             </tr>
             <tr>
               <td><code>convergence_*_cdf.png</code></td>
-              <td>Curvas de convergencia normalizadas por generación (con ±1 std).</td>
-              <td>Permiten ver rapidez y estabilidad del progreso.</td>
+              <td>Curva promedio de convergencia (CDF 0-1) con banda +/- 1 desviacion.</td>
+              <td>Muestra la rapidez y estabilidad del progreso.</td>
             </tr>
             <tr>
               <td><code>diversity_* .png</code></td>
-              <td>Diversidad (desviación típica media de parámetros) en el tiempo.</td>
-              <td>Ayudan a detectar pérdida de diversidad o exploración excesiva.</td>
+              <td>Evolucion de la diversidad (desviacion tipica media de parametros).</td>
+              <td>Detecta estancamiento o exploracion excesiva.</td>
             </tr>
           </tbody>
         </table>
 
         <h3>3.3 Reporte autogenerado</h3>
         <p>
-          El archivo <code>benchmark_results_assignment/reports/benchmark_report.md</code> resume configuración,
-          resultados normalizados y lista de figuras. Es ideal para una verificación rápida tras la ejecución.
+          <code>benchmark_results_assignment/reports/benchmark_report.md</code> resume la configuracion, lista el top 10 de combinaciones y referencia todas las figuras.
         </p>
       </article>
 
       <article class="card">
-        <h2>4. Normalización y comparación</h2>
+        <h2>4. Normalizacion y comparacion</h2>
         <p>
-          Las funciones de aptitud <code>original</code>, <code>ideal</code> y <code>color</code> operan en escalas
-          distintas. Para compararlas, el benchmark calibra cada fitness con muestras aleatorias (media y desviación) y
-          transforma cada resultado a Z-score y luego a CDF (0-1). Así, un valor de 0.99 representa el mismo percentil
-          sin importar el fitness evaluado.
+          Las funciones de aptitud operan en escalas distintas. El benchmark calibra cada fitness (media y desviacion) y
+          transforma los resultados a Z-score y luego a CDF (0-1). Asi se comparan <code>original</code>, <code>ideal</code> y <code>color</code> con la misma escala de calidad.
         </p>
       </article>
 
       <article class="card">
-        <h2>5. Interpretación de resultados</h2>
+        <h2>5. Interpretacion practica</h2>
         <ol>
-          <li>
-            <strong>Rendimiento promedio:</strong> revisar <code>ga_benchmark_summary.csv</code> y el boxplot para
-            identificar combinaciones con CDF alto y baja desviación.
-          </li>
-          <li>
-            <strong>Análisis por operador:</strong> los heatmaps muestran la intensidad de cada selección × cruce para
-            cada fitness.
-          </li>
-          <li>
-            <strong>Velocidad de convergencia:</strong> las curvas de convergencia evidencian qué configuraciones escalan
-            rápido hacia percentiles altos.
-          </li>
-          <li>
-            <strong>Diversidad:</strong> monitorizar las gráficas de diversidad para evitar estancamientos o poblaciones
-            excesivamente dispersas.
-          </li>
-          <li>
-            <strong>Selección de imágenes:</strong> ejecutar con <code>--save-images</code> para evaluar la calidad
-            visual de las mejores corridas.
-          </li>
+          <li>Ordena <code>ga_benchmark_summary.csv</code> por <code>mean_cdf</code> para encontrar combinaciones dominantes.</li>
+          <li>Usa los heatmaps para detectar que selecciones y cruces destacan en cada fitness.</li>
+          <li>Revisa <code>convergence_*_cdf.png</code> para evaluar velocidad y estabilidad.</li>
+          <li>Observa <code>diversity_* </code> para verificar que la poblacion no pierda variedad demasiado pronto.</li>
+          <li>Analiza las imagenes finales (generadas con <code>--save-images</code>) para confirmar la calidad subjetiva.</li>
         </ol>
       </article>
 
       <article class="card">
-        <h2>6. Recomendaciones prácticas</h2>
+        <h2>6. Recomendaciones finales</h2>
         <ul>
-          <li>
-            <strong>Exploración rápida:</strong> utilizar valores bajos de <code>--runs</code> y <code>--gens</code> sin
-            guardar imágenes, solo para validar dependencias.
-          </li>
-          <li>
-            <strong>Barrido formal:</strong> mantener 10 corridas y 20 generaciones, activando <code>--save-images</code>
-            para obtener evidencia visual completa.
-          </li>
-          <li>
-            <strong>Selección final:</strong> usar el resumen y las figuras para elegir la mejor configuración, confirmando con las imágenes asociadas.
-          </li>
-          <li>
-            <strong>Documentación:</strong> complementar esta guía con el informe de asignación y el reporte autogenerado.
-          </li>
+          <li>Itera con corridas cortas y reserva el barrido completo para la entrega final.</li>
+          <li>Combina esta guia con <code>docs/benchmark_assignment_report.md</code> y <code>docs/benchmark_guide.md</code>.</li>
+          <li>Si introduces nuevos operadores o funciones, actualiza <code>experiments/benchmark.py</code> y repite el benchmark.</li>
+          <li>Evita versionar las imagenes finales; el <code>.gitignore</code> ya excluye <code>benchmark_results_*/images/</code>.</li>
         </ul>
       </article>
     </main>
 
-    <footer>Guía elaborada para documentar el uso del benchmark GA · Octubre 2025</footer>
+    <footer>Guia detallada del benchmark GA � Octubre 2025</footer>
   </body>
 </html>

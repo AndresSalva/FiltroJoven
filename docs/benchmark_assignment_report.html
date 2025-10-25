@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <title>Informe de Benchmark - Practica de Algoritmos Geneticos</title>
+    <style>
+      :root {
+        --bg: #f4f7fb;
+        --panel: #ffffff;
+        --accent: #274b7a;
+        --accent-soft: #dce7f7;
+        --text: #1d2733;
+        --muted: #526375;
+        --border: #d1dae6;
+        --shadow: rgba(20, 40, 70, 0.08);
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        line-height: 1.7;
+      }
+      header {
+        background: linear-gradient(130deg, #3f83f8, var(--accent));
+        color: #fff;
+        text-align: center;
+        padding: 3.5rem 2rem;
+      }
+      header h1 {
+        margin: 0 0 0.4rem 0;
+        font-size: 2.3rem;
+        font-weight: 700;
+      }
+      header p {
+        margin: 0;
+        font-size: 1.05rem;
+        opacity: 0.85;
+      }
+      main {
+        max-width: 960px;
+        margin: -50px auto 70px auto;
+        padding: 0 26px;
+      }
+      .card {
+        background: var(--panel);
+        border-radius: 14px;
+        padding: 32px;
+        margin-bottom: 28px;
+        box-shadow: 0 20px 48px var(--shadow);
+      }
+      .card h2 {
+        margin-top: 0;
+        color: var(--accent);
+        font-size: 1.65rem;
+      }
+      .card h3 {
+        color: var(--muted);
+        font-size: 1.15rem;
+        margin-top: 1.7rem;
+      }
+      p {
+        margin: 0 0 1.05rem 0;
+      }
+      ul,
+      ol {
+        margin: 0 0 1.1rem 0;
+        padding-left: 1.3rem;
+      }
+      code {
+        font-family: "Fira Code", Consolas, monospace;
+        background: var(--accent-soft);
+        color: var(--accent);
+        padding: 2px 6px;
+        border-radius: 6px;
+        font-size: 0.95rem;
+      }
+      pre {
+        background: var(--accent-soft);
+        border-radius: 10px;
+        padding: 14px 16px;
+        overflow-x: auto;
+        font-family: "Fira Code", Consolas, monospace;
+        line-height: 1.5;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 1.2rem 0;
+        font-size: 0.97rem;
+      }
+      th,
+      td {
+        border: 1px solid var(--border);
+        padding: 10px 12px;
+        text-align: left;
+        vertical-align: top;
+      }
+      th {
+        background: var(--accent-soft);
+        color: var(--accent);
+        font-weight: 600;
+        font-size: 0.84rem;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+      }
+      footer {
+        text-align: center;
+        color: var(--muted);
+        font-size: 0.9rem;
+        padding: 2.5rem 1rem 3.5rem 1rem;
+      }
+      @media (max-width: 640px) {
+        header {
+          padding: 3rem 1.7rem;
+        }
+        header h1 {
+          font-size: 2rem;
+        }
+        .card {
+          padding: 24px;
+        }
+        table {
+          font-size: 0.9rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Informe de Benchmark</h1>
+      <p>Practica de Algoritmos Geneticos · Filtro de rejuvenecimiento facial</p>
+    </header>
+
+    <main>
+      <article class="card">
+        <h2>1. Resumen ejecutivo</h2>
+        <p>
+          El barrido sistematico sobre <code>experiments/benchmark.py</code> cubrio 48 combinaciones de operadores con 10
+          corridas cada una (480 ejecuciones en total). Las metricas confirman el cumplimiento integral de la practica
+          y posicionan a la funcion <code>color</code>, con seleccion por torneo y cruce k-point, como la alternativa mas
+          atractiva desde el punto de vista visual. Las funciones <code>ideal</code> y <code>original</code> aportan
+          configuraciones de referencia para suavizado uniforme y preservacion de detalle.
+        </p>
+      </article>
+
+      <article class="card">
+        <h2>2. Matriz de requisitos</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Requisito</th>
+              <th>Evidencia</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Representacion y transformacion parametrica</td>
+              <td>
+                <code>transformations/face_manipulator.py</code> define <code>PARAM_BOUNDS</code>,
+                <code>sample_params</code>, <code>apply_transformation</code> y el motor
+                <code>run_genetic_algorithm</code>.
+              </td>
+            </tr>
+            <tr>
+              <td>Tres funciones de aptitud</td>
+              <td><code>ga/fitness_functions.py</code> implementa <code>original</code>, <code>ideal</code>, <code>color</code>.</td>
+            </tr>
+            <tr>
+              <td>Operadores geneticos variados</td>
+              <td>
+                Selecciones (torneo, ruleta, rank, SUS), cruces (single/two/k/uniform) y mutacion gaussiana via los
+                modulos en <code>ga/</code>.
+              </td>
+            </tr>
+            <tr>
+              <td>10 corridas por combinacion</td>
+              <td>
+                <code>--runs 10</code> aplicado a 48 combinaciones genera 480 ejecuciones registradas en el
+                dataset.
+              </td>
+            </tr>
+            <tr>
+              <td>Registro de convergencia y diversidad</td>
+              <td>
+                <code>ga_benchmark_runs.csv</code> y <code>ga_benchmark_history.csv</code> guardan historiales por
+                generacion, diversidad y duraciones.
+              </td>
+            </tr>
+            <tr>
+              <td>Guardar mejores individuos</td>
+              <td>
+                <code>--save-images</code> genera 480 imagenes finales (no versionadas, reproducibles al repetir el
+                benchmark).
+              </td>
+            </tr>
+            <tr>
+              <td>Informe tecnico completo</td>
+              <td>
+                Este documento resume el experimento y responde las preguntas planteadas en
+                <code>practicaGeneticos.pdf</code>.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </article>
+
+      <article class="card">
+        <h2>3. Metodologia y configuracion</h2>
+        <h3>3.1 Flujo del benchmark</h3>
+        <ol>
+          <li>Carga de la imagen objetivo y generacion de mascaras faciales reutilizables.</li>
+          <li>Construccion del producto cartesiano fitness × seleccion × cruce indicado en CLI.</li>
+          <li>
+            Ejecucion multihilo de 10 corridas por combinacion con semillas derivadas de
+            <code>base_seed + run_id</code>.
+          </li>
+          <li>Registro de aptitudes, parametros finales, historiales y diversidad; guardado opcional de imagenes.</li>
+          <li>Generacion de CSV, figuras y reporte autogenerado en <code>benchmark_results_assignment/</code>.</li>
+        </ol>
+
+        <h3>3.2 Parametros clave</h3>
+        <ul>
+          <li>Generaciones: 20 · Poblacion: 24 individuos</li>
+          <li>Funciones de aptitud: <code>original</code>, <code>ideal</code>, <code>color</code></li>
+          <li>Selecciones: torneo, ruleta, rank, SUS · Cruces: single/two/k/uniform</li>
+          <li>Mutacion: gaussiana · Corridas: 10 por combinacion</li>
+          <li>Muestras de calibracion: 40 por fitness para normalizacion</li>
+          <li><code>--save-images</code> activo para generar evidencia visual</li>
+        </ul>
+
+        <h3>3.3 Comando reproducible</h3>
+        <pre><code>python -u experiments/benchmark.py --image tuto.jpg --input-dir input_images `
+    --output-dir benchmark_results_assignment --runs 10 --gens 20 --pop 24 `
+    --fitness original ideal color `
+    --selection tournament roulette rank sus `
+    --crossover single_point two_point k_point uniform `
+    --mutation gaussian --calibration-samples 40 --save-images
+</code></pre>
+      </article>
+
+      <article class="card">
+        <h2>4. Resultados cuantitativos</h2>
+
+        <h3>4.1 Top por funcion de aptitud</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Fitness</th>
+              <th>Seleccion</th>
+              <th>Cruce</th>
+              <th>mean_cdf</th>
+              <th>mean_fitness</th>
+              <th>std_fitness</th>
+              <th>Diversidad final</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>original</td>
+              <td>torneo</td>
+              <td>k_point</td>
+              <td>0.985661</td>
+              <td>153.295160</td>
+              <td>0.161633</td>
+              <td>2.628680</td>
+            </tr>
+            <tr>
+              <td>ideal</td>
+              <td>torneo</td>
+              <td>single_point</td>
+              <td>0.995080</td>
+              <td>29.631846</td>
+              <td>0.005472</td>
+              <td>2.205006</td>
+            </tr>
+            <tr>
+              <td>color</td>
+              <td>torneo</td>
+              <td>k_point</td>
+              <td>0.993585</td>
+              <td>0.795245</td>
+              <td>0.001190</td>
+              <td>3.630081</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>4.2 Seleccion vs rendimiento</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Fitness</th>
+              <th>Rank</th>
+              <th>Roulette</th>
+              <th>SUS</th>
+              <th>Tournament</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>color</td>
+              <td>0.993546</td>
+              <td>0.993444</td>
+              <td>0.993440</td>
+              <td><strong>0.993555</strong></td>
+            </tr>
+            <tr>
+              <td>ideal</td>
+              <td>0.994163</td>
+              <td>0.992743</td>
+              <td>0.992436</td>
+              <td><strong>0.994539</strong></td>
+            </tr>
+            <tr>
+              <td>original</td>
+              <td>0.985534</td>
+              <td>0.985035</td>
+              <td>0.984630</td>
+              <td><strong>0.985638</strong></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>4.3 Cruce vs rendimiento</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Fitness</th>
+              <th>k_point</th>
+              <th>single_point</th>
+              <th>two_point</th>
+              <th>uniform</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>color</td>
+              <td>0.993499</td>
+              <td><strong>0.993509</strong></td>
+              <td>0.993496</td>
+              <td>0.993481</td>
+            </tr>
+            <tr>
+              <td>ideal</td>
+              <td>0.993961</td>
+              <td>0.993717</td>
+              <td>0.991545</td>
+              <td><strong>0.994657</strong></td>
+            </tr>
+            <tr>
+              <td>original</td>
+              <td><strong>0.985218</strong></td>
+              <td>0.985410</td>
+              <td>0.985014</td>
+              <td>0.985195</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>4.4 Duraciones y convergencia</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Fitness</th>
+              <th>Duracion media (s)</th>
+              <th>Desv. estandar (s)</th>
+              <th>Generacion estable (media)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>color</td>
+              <td>43.69</td>
+              <td>10.83</td>
+              <td>17.49</td>
+            </tr>
+            <tr>
+              <td>ideal</td>
+              <td>28.51</td>
+              <td>11.90</td>
+              <td>17.13</td>
+            </tr>
+            <tr>
+              <td>original</td>
+              <td>89.35</td>
+              <td>9.19</td>
+              <td>18.15</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>4.5 Diversidad poblacional</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Fitness</th>
+              <th>Diversidad media</th>
+              <th>Desv. estandar</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>color</td>
+              <td>5.224</td>
+              <td>1.823</td>
+            </tr>
+            <tr>
+              <td>ideal</td>
+              <td>5.281</td>
+              <td>2.532</td>
+            </tr>
+            <tr>
+              <td>original</td>
+              <td>5.870</td>
+              <td>2.976</td>
+            </tr>
+          </tbody>
+        </table>
+      </article>
+
+      <article class="card">
+        <h2>5. Hallazgos cualitativos</h2>
+        <ul>
+          <li>
+            <strong><code>color</code> (torneo + k_point):</strong> mejor percepcion visual. Ilumina la piel, suaviza
+            manchas y mantiene brillo natural; ideal para la entrega.
+          </li>
+          <li>
+            <strong><code>ideal</code> (torneo + single_point):</strong> suavizado uniforme con rasgos nitidos, aunque el
+            resultado luce mas plano frente al dinamismo cromatico de <code>color</code>.
+          </li>
+          <li>
+            <strong><code>original</code> (torneo + k_point):</strong> preserva detalle y contraste, pero deja textura
+            residual en zonas de alta frecuencia.
+          </li>
+        </ul>
+      </article>
+
+      <article class="card">
+        <h2>6. Discusion segun el PDF</h2>
+        <ol>
+          <li>
+            <strong>Funcion con mejor resultado visual:</strong> <code>color</code> + torneo + k_point, gracias a su
+            acabado luminoso y natural (mean_cdf 0.9936).
+          </li>
+          <li>
+            <strong>Impacto de los operadores:</strong> torneo acelera la convergencia y reduce dispersion; cruces
+            multipunto benefician <code>color</code> y <code>original</code>; single/uniform favorecen
+            <code>ideal</code>; ruleta y SUS elevan la varianza.
+          </li>
+          <li>
+            <strong>Limitaciones:</strong> tiempos altos para <code>original</code>, sensibilidad al diseno de la aptitud
+            y ausencia de deformaciones tipo caricatura.
+          </li>
+          <li>
+            <strong>Mejoras propuestas:</strong> integrar landmarks faciales, mutacion adaptativa o enfoques
+            multiobjetivo, cachear metricas y sumar evaluaciones subjetivas.
+          </li>
+        </ol>
+      </article>
+
+      <article class="card">
+        <h2>7. Conclusiones y recomendaciones</h2>
+        <ul>
+          <li>
+            El benchmark cumple los requisitos de la practica: 3 funciones, 4 selecciones, 4 cruces, 10 corridas por
+            combinacion y evidencia cuantitativa/cualitativa.
+          </li>
+          <li>
+            Configuracion recomendada: <span style="font-weight: 600;">color + torneo + k_point</span>. Alternativa con
+            enfoque uniforme: <code>ideal + torneo + single_point</code> (o <code>uniform</code>).
+          </li>
+          <li>
+            Mantener <code>--runs 10</code> para resultados oficiales y reducirlo solo en pruebas rapidas. Incluir las
+            imagenes finales como anexo visual en la entrega.
+          </li>
+        </ul>
+      </article>
+
+      <article class="card">
+        <h2>8. Artefactos generados</h2>
+        <ul>
+          <li>
+            <strong>Datos (CSV):</strong>
+            <ul>
+              <li><code>benchmark_results_assignment/data/ga_benchmark_runs.csv</code></li>
+              <li><code>benchmark_results_assignment/data/ga_benchmark_summary.csv</code></li>
+              <li><code>benchmark_results_assignment/data/ga_benchmark_history.csv</code></li>
+            </ul>
+          </li>
+          <li>
+            <strong>Figuras (PNG):</strong> boxplots, heatmaps, curvas de convergencia y diversidad en
+            <code>benchmark_results_assignment/figures/</code>.
+          </li>
+          <li>
+            <strong>Reporte autogenerado:</strong> <code>benchmark_results_assignment/reports/benchmark_report.md</code>.
+          </li>
+          <li>
+            <strong>Imagenes finales:</strong> <code>benchmark_results_assignment/images/&lt;fitness&gt;/...</code>
+            (regenerables al repetir el benchmark).
+          </li>
+        </ul>
+      </article>
+    </main>
+
+    <footer>Informe elaborado para la Practica de Algoritmos Geneticos · Octubre 2025</footer>
+  </body>
+</html>

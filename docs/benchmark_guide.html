@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <title>Guia Practica del Benchmark</title>
+    <style>
+      :root {
+        --bg: #f4f7fb;
+        --panel: #ffffff;
+        --accent: #274b7a;
+        --accent-soft: #dce7f7;
+        --text: #1d2733;
+        --muted: #526375;
+        --border: #d1dae6;
+        --shadow: rgba(20, 40, 70, 0.08);
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        line-height: 1.7;
+      }
+      header {
+        background: linear-gradient(130deg, #3f83f8, var(--accent));
+        color: #fff;
+        text-align: center;
+        padding: 3.2rem 2rem;
+      }
+      header h1 {
+        margin: 0 0 0.4rem 0;
+        font-size: 2.2rem;
+        font-weight: 700;
+      }
+      header p {
+        margin: 0;
+        font-size: 1.05rem;
+        opacity: 0.85;
+      }
+      main {
+        max-width: 960px;
+        margin: -48px auto 70px auto;
+        padding: 0 26px;
+      }
+      .card {
+        background: var(--panel);
+        border-radius: 14px;
+        padding: 28px;
+        margin-bottom: 26px;
+        box-shadow: 0 18px 44px var(--shadow);
+      }
+      .card h2 {
+        margin-top: 0;
+        color: var(--accent);
+        font-size: 1.6rem;
+      }
+      .card h3 {
+        color: var(--muted);
+        font-size: 1.12rem;
+        margin-top: 1.6rem;
+      }
+      p {
+        margin: 0 0 1rem 0;
+      }
+      ul {
+        margin: 0 0 1rem 0;
+        padding-left: 1.2rem;
+      }
+      code {
+        font-family: "Fira Code", Consolas, monospace;
+        background: var(--accent-soft);
+        color: var(--accent);
+        padding: 2px 6px;
+        border-radius: 6px;
+        font-size: 0.95rem;
+      }
+      pre {
+        background: var(--accent-soft);
+        border-radius: 10px;
+        padding: 14px 16px;
+        overflow-x: auto;
+        font-family: "Fira Code", Consolas, monospace;
+        line-height: 1.5;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 1.2rem 0;
+        font-size: 0.95rem;
+      }
+      th,
+      td {
+        border: 1px solid var(--border);
+        padding: 9px 11px;
+        text-align: left;
+        vertical-align: top;
+      }
+      th {
+        background: var(--accent-soft);
+        color: var(--accent);
+        font-size: 0.82rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+      }
+      footer {
+        text-align: center;
+        color: var(--muted);
+        font-size: 0.9rem;
+        padding: 2.2rem 1rem 3.2rem 1rem;
+      }
+      @media (max-width: 640px) {
+        header {
+          padding: 2.7rem 1.7rem;
+        }
+        header h1 {
+          font-size: 1.9rem;
+        }
+        .card {
+          padding: 22px;
+        }
+        table {
+          font-size: 0.9rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Guia Practica del Benchmark</h1>
+      <p>Resumen operativo de experiments/benchmark.py</p>
+    </header>
+
+    <main>
+      <article class="card">
+        <h2>1. Objetivo rapido</h2>
+        <p>
+          El benchmark genera y evalua todas las combinaciones de funciones de aptitud, selecciones y cruces que se
+          indiquen. Produce datos cuantitativos y material visual para entender el comportamiento real del algoritmo
+          genetico y documentar los hallazgos sin esfuerzo manual.
+        </p>
+      </article>
+
+      <article class="card">
+        <h2>2. Ejecucion basica</h2>
+        <ol>
+          <li>Instala dependencias: <code>pip install -r requirements.txt</code>.</li>
+          <li>Coloca la imagen de prueba en <code>input_images/</code>.</li>
+          <li>
+            Corrida rapida de validacion:
+            <pre><code>python -u experiments/benchmark.py --image tuto.jpg --runs 1 --gens 2 --pop 6 `
+    --fitness original ideal color --selection tournament --crossover single_point `
+    --mutation gaussian --output-dir benchmark_results_quick
+</code></pre>
+          </li>
+          <li>
+            Barrido completo recomendado:
+            <pre><code>python -u experiments/benchmark.py --image tuto.jpg --runs 10 --gens 20 --pop 24 `
+    --fitness original ideal color `
+    --selection tournament roulette rank sus `
+    --crossover single_point two_point k_point uniform `
+    --mutation gaussian --calibration-samples 40 --save-images `
+    --output-dir benchmark_results
+</code></pre>
+          </li>
+        </ol>
+        <p>
+          Reduce corridas o generaciones durante la iteracion. Activa <code>--save-images</code> solo cuando necesites
+          los resultados finales.
+        </p>
+      </article>
+
+      <article class="card">
+        <h2>3. Carpetas y archivos</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Ruta</th>
+              <th>Contenido y uso</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>benchmark_results_*/data/</code></td>
+              <td>
+                CSV con corridas individuales (<code>ga_benchmark_runs.csv</code>), resumenes (<code>ga_benchmark_summary.csv</code>) e historiales (<code>ga_benchmark_history.csv</code>).
+              </td>
+            </tr>
+            <tr>
+              <td><code>benchmark_results_*/figures/</code></td>
+              <td>Boxplots, heatmaps, curvas de convergencia y diversidad en escala CDF 0-1.</td>
+            </tr>
+            <tr>
+              <td><code>benchmark_results_*/reports/</code></td>
+              <td><code>benchmark_report.md</code>: configuracion, top combinaciones y listado de figuras.</td>
+            </tr>
+            <tr>
+              <td><code>benchmark_results_*/images/&lt;fitness&gt;/</code></td>
+              <td>
+                Imagen final de cada corrida (solo si se usa <code>--save-images</code>). Ignorada en Git para evitar
+                peso.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </article>
+
+      <article class="card">
+        <h2>4. Interpretacion rapida</h2>
+        <ul>
+          <li>
+            <strong>Promedio de rendimiento:</strong> ordena <code>ga_benchmark_summary.csv</code> por
+            <code>mean_cdf</code>; valores cercanos a 1 indican percentiles altos.
+          </li>
+          <li>
+            <strong>Estabilidad:</strong> revisa <code>std_fitness</code> y <code>std_cdf</code>. Valores bajos implican
+            corridas consistentes.
+          </li>
+          <li>
+            <strong>Convergencia:</strong> las figuras <code>convergence_*_cdf.png</code> muestran cuan rapido progresa
+            cada configuracion.
+          </li>
+          <li>
+            <strong>Diversidad:</strong> <code>diversity_*</code> permite detectar estancamientos o exceso de
+            exploracion.
+          </li>
+          <li>
+            <strong>Revision visual:</strong> usa las imagenes finales para comparar resultados cualitativos.
+          </li>
+        </ul>
+      </article>
+
+      <article class="card">
+        <h2>5. Sugerencias finales</h2>
+        <ul>
+          <li>
+            Realiza corridas cortas sin <code>--save-images</code> hasta confirmar dependencias y rutas antes del barrido
+            definitivo.
+          </li>
+          <li>
+            Complementa esta guia con <code>docs/benchmark_assignment_report.md</code> y
+            <code>docs/benchmark_details.md</code> para un informe completo.
+          </li>
+          <li>
+            Si agregas nuevos operadores o funciones de aptitud, actualiza los registros en
+            <code>experiments/benchmark.py</code> y repite el benchmark.
+          </li>
+          <li>
+            Evita versionar las imagenes generadas; el <code>.gitignore</code> ya excluye
+            <code>benchmark_results_*/images/</code>.
+          </li>
+        </ul>
+      </article>
+    </main>
+
+    <footer>Guia rapida del benchmark · Octubre 2025</footer>
+  </body>
+</html>

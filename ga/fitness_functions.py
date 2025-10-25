@@ -1,7 +1,17 @@
 # ga/fitness_functions.py
+import copy
+from typing import Callable, Dict, Mapping, Optional
+
 import cv2
 import numpy as np
-from utils.metrics import laplacian_variance, edge_energy, canny_density, gabor_energy, ssim_lite
+
+from utils.metrics import (
+    canny_density,
+    edge_energy,
+    gabor_energy,
+    laplacian_variance,
+    ssim_lite,
+)
 
 # --- Fitness 1: El Original (Basado en Métrica Compuesta) ---
 
@@ -97,27 +107,247 @@ def ideal_proximity_fitness(orig_bgr, proc_bgr, masks):
 
 def color_texture_fitness(orig_bgr, proc_bgr, masks):
     """
-    Evalúa la naturalidad del color de la piel y busca una textura que esté en un "punto dulce",
-    evitando tanto el exceso de arrugas como el aspecto de plástico.
+    Naturalidad de color y textura en piel, sensible a cambios útiles.
+    - Color: mantener el tono (a*, b*) cercano al original en piel.
+    - Textura: reducción moderada de nitidez en piel, evitando plástico o exceso de arrugas,
+      usando razón relativa respecto al original.
     """
     skin_only = masks['skin_only']
-    
-    # 1. Analizar la naturalidad del color de la piel.
-    orig_lab = cv2.cvtColor(orig_bgr, cv2.COLOR_BGR2LAB)
-    proc_lab = cv2.cvtColor(proc_bgr, cv2.COLOR_BGR2LAB)
 
-    hist_orig = cv2.calcHist([orig_lab], [1, 2], skin_only, [16, 16], [-128, 127, -128, 127])
-    hist_proc = cv2.calcHist([proc_lab], [1, 2], skin_only, [16, 16], [-128, 127, -128, 127])
-    
-    cv2.normalize(hist_orig, hist_orig, alpha=0, beta=1, norm_type=cv2.NORM_MINMAX)
-    cv2.normalize(hist_proc, hist_proc, alpha=0, beta=1, norm_type=cv2.NORM_MINMAX)
-    
-    color_score = cv2.compareHist(hist_orig, hist_proc, cv2.HISTCMP_CORREL)
+    # 1) Color: diferencia Δab en piel (a* y b*), convertida a score [0,1]
+    # Convertir a Lab (OpenCV: L in [0,255], a/b con offset +128 en uint8)
+    orig_lab = cv2.cvtColor(orig_bgr, cv2.COLOR_BGR2LAB).astype(np.float32)
+    proc_lab = cv2.cvtColor(proc_bgr, cv2.COLOR_BGR2LAB).astype(np.float32)
+    a_o = orig_lab[..., 1] - 128.0
+    b_o = orig_lab[..., 2] - 128.0
+    a_p = proc_lab[..., 1] - 128.0
+    b_p = proc_lab[..., 2] - 128.0
+    if np.any(skin_only > 0):
+        m = (skin_only > 0)
+        delta_ab = np.sqrt((a_p[m] - a_o[m])**2 + (b_p[m] - b_o[m])**2)
+        mean_delta_ab = float(delta_ab.mean()) if delta_ab.size > 0 else 0.0
+    else:
+        mean_delta_ab = 0.0
+    # Mapear Δab a score: exp(-Δab/k). k controla sensibilidad (~6 da rango útil)
+    k_color = 6.0
+    color_score = float(np.exp(-mean_delta_ab / max(1e-6, k_color)))
 
-    # 2. Evaluar la textura buscando un "punto dulce" de nitidez.
-    lap_var = laplacian_variance(cv2.cvtColor(proc_bgr, cv2.COLOR_BGR2GRAY), skin_only)
-    ideal_lap_var = 25.0
-    
-    texture_quality = np.exp(-((lap_var - ideal_lap_var)**2) / (2 * (10.0**2)))
+    # 2) Textura: razón de varianza de Laplaciano en piel respecto al original
+    gray_o = cv2.cvtColor(orig_bgr, cv2.COLOR_BGR2GRAY)
+    gray_p = cv2.cvtColor(proc_bgr, cv2.COLOR_BGR2GRAY)
+    lap_o = laplacian_variance(gray_o, skin_only)
+    lap_p = laplacian_variance(gray_p, skin_only)
+    if lap_o <= 0:
+        lap_o = 1e-6
+    r = lap_p / lap_o
+    # Objetivo: ligera suavización en piel (p.ej. 0.7 ± 0.2)
+    r_target = 0.6
+    sigma_r = 0.2
+    texture_quality = float(np.exp(-((r - r_target) ** 2) / (2.0 * (sigma_r ** 2))))
 
-    return float(0.5 * color_score + 0.5 * texture_quality)
+    # 3) Claridad/Brillo: incentivar un leve aumento de L* en piel
+    L_o = orig_lab[..., 0]
+    L_p = proc_lab[..., 0]
+    if np.any(skin_only > 0):
+        m = (skin_only > 0)
+        dL = float(L_p[m].mean() - L_o[m].mean())
+    else:
+        dL = 0.0
+    light_target = 6.0
+    sigma_light = 3.0
+    light_score = float(np.exp(-((dL - light_target) ** 2) / (2.0 * (sigma_light ** 2))))
+
+    # 4) Uniformidad: reducir la varianza de L* en piel de forma moderada
+    if np.any(skin_only > 0):
+        m = (skin_only > 0)
+        var_L_o = float(np.var(L_o[m]))
+        var_L_p = float(np.var(L_p[m]))
+    else:
+        var_L_o = 1e-6
+        var_L_p = 1e-6
+    if var_L_o <= 0:
+        var_L_o = 1e-6
+    vr = var_L_p / var_L_o
+    vr_target = 0.6
+    sigma_vr = 0.2
+    uniformity_score = float(np.exp(-((vr - vr_target) ** 2) / (2.0 * (sigma_vr ** 2))))
+
+    # 5) Combinar (pesos equilibrados)
+    return float(0.25 * color_score + 0.25 * texture_quality + 0.25 * light_score + 0.25 * uniformity_score)
+
+
+def color_young_fitness(orig_bgr, proc_bgr, masks):
+    """
+    Variante con sesgo a "más joven":
+    - Fuerte suavizado de piel (menor textura) con objetivo más bajo.
+    - Aumento de luminosidad en piel más marcado.
+    - Reducción de no-uniformidad de L*.
+    - Penalización suave a cambios de a*/b* para permitir ligeros calentamientos.
+    """
+    skin_only = masks['skin_only']
+
+    orig_lab = cv2.cvtColor(orig_bgr, cv2.COLOR_BGR2LAB).astype(np.float32)
+    proc_lab = cv2.cvtColor(proc_bgr, cv2.COLOR_BGR2LAB).astype(np.float32)
+
+    # Color (débil): mantener Δab pequeño pero permitir cambios sutiles
+    a_o = orig_lab[..., 1] - 128.0
+    b_o = orig_lab[..., 2] - 128.0
+    a_p = proc_lab[..., 1] - 128.0
+    b_p = proc_lab[..., 2] - 128.0
+    if np.any(skin_only > 0):
+        m = (skin_only > 0)
+        delta_ab = np.sqrt((a_p[m] - a_o[m])**2 + (b_p[m] - b_o[m])**2)
+        mean_delta_ab = float(delta_ab.mean()) if delta_ab.size > 0 else 0.0
+    else:
+        mean_delta_ab = 0.0
+    k_color = 10.0  # penaliza menos que en la versión "natural"
+    color_score = float(np.exp(-mean_delta_ab / max(1e-6, k_color)))
+
+    # Textura: objetivo agresivo
+    gray_o = cv2.cvtColor(orig_bgr, cv2.COLOR_BGR2GRAY)
+    gray_p = cv2.cvtColor(proc_bgr, cv2.COLOR_BGR2GRAY)
+    lap_o = laplacian_variance(gray_o, skin_only)
+    lap_p = laplacian_variance(gray_p, skin_only)
+    if lap_o <= 0:
+        lap_o = 1e-6
+    r = lap_p / lap_o
+    r_target = 0.45
+    sigma_r = 0.18
+    texture_quality = float(np.exp(-((r - r_target) ** 2) / (2.0 * (sigma_r ** 2))))
+
+    # Luz: aumento más fuerte de L*
+    L_o = orig_lab[..., 0]
+    L_p = proc_lab[..., 0]
+    if np.any(skin_only > 0):
+        m = (skin_only > 0)
+        dL = float(L_p[m].mean() - L_o[m].mean())
+    else:
+        dL = 0.0
+    light_target = 10.0
+    sigma_light = 4.0
+    light_score = float(np.exp(-((dL - light_target) ** 2) / (2.0 * (sigma_light ** 2))))
+
+    # Uniformidad: reducir varianza de L*
+    if np.any(skin_only > 0):
+        m = (skin_only > 0)
+        var_L_o = float(np.var(L_o[m]))
+        var_L_p = float(np.var(L_p[m]))
+    else:
+        var_L_o = 1e-6
+        var_L_p = 1e-6
+    if var_L_o <= 0:
+        var_L_o = 1e-6
+    vr = var_L_p / var_L_o
+    vr_target = 0.5
+    sigma_vr = 0.2
+    uniformity_score = float(np.exp(-((vr - vr_target) ** 2) / (2.0 * (sigma_vr ** 2))))
+
+    # Pesos con mayor énfasis en textura y luz
+    return float(0.15 * color_score + 0.35 * texture_quality + 0.30 * light_score + 0.20 * uniformity_score)
+
+
+FITNESS_FUNCTIONS: Dict[str, Callable] = {
+    "original": original_fitness,
+    "ideal": ideal_proximity_fitness,
+    "color": color_young_fitness,
+}
+
+
+class TrackedFitness:
+    """
+    Wraps a fitness function and exposes the last computed score for reporting.
+    """
+
+    def __init__(self, name: str, func: Callable):
+        self.name = name
+        self.func = func
+        self._last_components: Dict[str, float] = {}
+
+    @property
+    def label(self) -> str:
+        return self.name
+
+    def __call__(self, orig_bgr, proc_bgr, masks):
+        score = float(self.func(orig_bgr, proc_bgr, masks))
+        self._last_components = {self.name: score}
+        return score
+
+    def get_last_components(self) -> Dict[str, float]:
+        return copy.deepcopy(self._last_components)
+
+
+class WeightedCompositeFitness:
+    """
+    Combines multiple fitness functions using z-score normalization and weights.
+    """
+
+    def __init__(
+        self,
+        weights: Mapping[str, float],
+        base_funcs: Mapping[str, Callable],
+        stats: Mapping[str, Mapping[str, float]],
+        label: Optional[str] = None,
+    ):
+        self.weights = dict(weights)
+        self.base_funcs = dict(base_funcs)
+        self.stats = {
+            name: {
+                "mean": float(info.get("mean", 0.0)),
+                "std": float(info.get("std", 1.0)) if float(info.get("std", 1.0)) != 0 else 1.0,
+            }
+            for name, info in stats.items()
+        }
+        for name in self.weights:
+            if name not in self.base_funcs:
+                raise KeyError(f"Unknown base fitness '{name}' in composite weights")
+            if name not in self.stats:
+                raise KeyError(f"Missing normalization stats for '{name}'")
+        self._last_components: Dict[str, Dict[str, float]] = {}
+        self._label = label or self._default_label()
+
+    def _default_label(self) -> str:
+        parts = [f"{name}:{weight:.2f}" for name, weight in self.weights.items()]
+        return "combo(" + ", ".join(parts) + ")"
+
+    @property
+    def label(self) -> str:
+        return self._label
+
+    def __call__(self, orig_bgr, proc_bgr, masks):
+        total = 0.0
+        component_store: Dict[str, Dict[str, float]] = {}
+        for name, weight in self.weights.items():
+            raw_value = float(self.base_funcs[name](orig_bgr, proc_bgr, masks))
+            mean = self.stats[name]["mean"]
+            std = self.stats[name]["std"] if self.stats[name]["std"] != 0 else 1.0
+            z_value = (raw_value - mean) / std if std > 0 else 0.0
+            total += weight * z_value
+            component_store[name] = {
+                "raw": raw_value,
+                "z": z_value,
+                "weight": weight,
+                "mean": mean,
+                "std": std,
+            }
+        self._last_components = component_store
+        return float(total)
+
+    def get_last_components(self) -> Dict[str, Dict[str, float]]:
+        return copy.deepcopy(self._last_components)
+
+
+def get_tracked_fitness(name: str) -> TrackedFitness:
+    if name not in FITNESS_FUNCTIONS:
+        raise KeyError(f"Unknown fitness function '{name}'")
+    return TrackedFitness(name, FITNESS_FUNCTIONS[name])
+
+
+def build_weighted_composite(
+    weights: Mapping[str, float],
+    stats: Mapping[str, Mapping[str, float]],
+    base_registry: Optional[Mapping[str, Callable]] = None,
+    label: Optional[str] = None,
+) -> WeightedCompositeFitness:
+    registry = dict(base_registry) if base_registry is not None else FITNESS_FUNCTIONS
+    base_funcs = {name: registry[name] for name in weights.keys()}
+    return WeightedCompositeFitness(weights=weights, base_funcs=base_funcs, stats=stats, label=label)

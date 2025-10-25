@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <title>Visita Rapida al Codigo</title>
+    <style>
+      :root {
+        --bg: #f4f7fb;
+        --panel: #ffffff;
+        --accent: #274b7a;
+        --accent-soft: #dce7f7;
+        --text: #1d2733;
+        --muted: #526375;
+        --border: #d1dae6;
+        --shadow: rgba(20, 40, 70, 0.08);
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        line-height: 1.7;
+      }
+      header {
+        background: linear-gradient(130deg, #3f83f8, var(--accent));
+        color: #fff;
+        text-align: center;
+        padding: 3.2rem 2rem;
+      }
+      header h1 {
+        margin: 0 0 0.4rem 0;
+        font-size: 2.2rem;
+        font-weight: 700;
+      }
+      header p {
+        margin: 0;
+        font-size: 1.05rem;
+        opacity: 0.85;
+      }
+      main {
+        max-width: 960px;
+        margin: -48px auto 70px auto;
+        padding: 0 26px;
+      }
+      .card {
+        background: var(--panel);
+        border-radius: 14px;
+        padding: 28px;
+        margin-bottom: 26px;
+        box-shadow: 0 18px 44px var(--shadow);
+      }
+      .card h2 {
+        margin-top: 0;
+        color: var(--accent);
+        font-size: 1.6rem;
+      }
+      .card h3 {
+        color: var(--muted);
+        font-size: 1.12rem;
+        margin-top: 1.6rem;
+      }
+      p {
+        margin: 0 0 1rem 0;
+      }
+      ul {
+        margin: 0 0 1rem 0;
+        padding-left: 1.2rem;
+      }
+      code {
+        font-family: "Fira Code", Consolas, monospace;
+        background: var(--accent-soft);
+        color: var(--accent);
+        padding: 2px 6px;
+        border-radius: 6px;
+        font-size: 0.95rem;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 1.2rem 0;
+        font-size: 0.95rem;
+      }
+      th,
+      td {
+        border: 1px solid var(--border);
+        padding: 9px 11px;
+        text-align: left;
+        vertical-align: top;
+      }
+      th {
+        background: var(--accent-soft);
+        color: var(--accent);
+        font-size: 0.82rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+      }
+      footer {
+        text-align: center;
+        color: var(--muted);
+        font-size: 0.9rem;
+        padding: 2.2rem 1rem 3.2rem 1rem;
+      }
+      @media (max-width: 640px) {
+        header {
+          padding: 2.7rem 1.7rem;
+        }
+        header h1 {
+          font-size: 1.9rem;
+        }
+        .card {
+          padding: 22px;
+        }
+        table {
+          font-size: 0.9rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Visita Rapida al Codigo</h1>
+      <p>Mapa de modulos y recomendaciones para extender el proyecto</p>
+    </header>
+
+    <main>
+      <article class="card">
+        <h2>1. Piezas principales</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Archivo</th>
+              <th>Rol</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>main.py</code></td>
+              <td>Punto de entrada para una sola corrida; expone CLI para imagen, fitness y operadores.</td>
+            </tr>
+            <tr>
+              <td><code>transformations/face_manipulator.py</code></td>
+              <td>Mascaras faciales, transformacion parametrica y motor del algoritmo genetico.</td>
+            </tr>
+            <tr>
+              <td><code>ga/fitness_functions.py</code></td>
+              <td>Funciones <code>original</code>, <code>ideal</code>, <code>color</code> y combinaciones ponderadas.</td>
+            </tr>
+            <tr>
+              <td><code>ga/selection_operators.py</code></td>
+              <td>Torneo, ruleta, rank y SUS.</td>
+            </tr>
+            <tr>
+              <td><code>ga/crossover_operators.py</code></td>
+              <td>Cruces single-point, two-point, k-point y uniform.</td>
+            </tr>
+            <tr>
+              <td><code>ga/mutation_operators.py</code></td>
+              <td>Mutacion gaussiana y recorte de parametros via <code>clip_params</code>.</td>
+            </tr>
+            <tr>
+              <td><code>experiments/benchmark.py</code></td>
+              <td>Barrido masivo, generacion de CSV, figuras y reportes.</td>
+            </tr>
+            <tr>
+              <td><code>utils/</code></td>
+              <td>Funciones de imagen, metricas y visualizacion.</td>
+            </tr>
+            <tr>
+              <td><code>core/</code></td>
+              <td>Deteccion facial y mascaras base (Haar cascades, landmarks).</td>
+            </tr>
+          </tbody>
+        </table>
+      </article>
+
+      <article class="card">
+        <h2>2. Flujo tipico (<code>main.py</code>)</h2>
+        <ol>
+          <li>Parseo de argumentos (imagen, fitness, operadores, generaciones, poblacion, semilla).</li>
+          <li>Carga de la imagen con <code>utils.image_utils.load_image</code>.</li>
+          <li>Mapeo de nombres a funciones reales (<code>FITNESS_NAMES</code>, <code>SELECTION_MAP</code>, etc.).</li>
+          <li>Ejecucion de <code>run_genetic_algorithm</code> con mascaras precalculadas.</li>
+          <li>Guardado de la mejor imagen en <code>output_images/</code> y log de parametros en consola.</li>
+        </ol>
+      </article>
+
+      <article class="card">
+        <h2>3. Transformacion y GA (<code>transformations/face_manipulator.py</code>)</h2>
+        <ul>
+          <li>
+            <strong><code>PARAM_BOUNDS</code>:</strong> limites para <code>bilateral_d</code>, <code>sigma_color</code>,
+            <code>sigma_space</code>, <code>gamma</code>, <code>unsharp_amount</code>.
+          </li>
+          <li>
+            <strong><code>sample_params</code>:</strong> muestreo de parametros dentro de los limites (deterministico si
+            se provee generador).
+          </li>
+          <li>
+            <strong><code>apply_transformation</code>:</strong> aplica suavizado bilateral, correccion gamma y unsharp
+            masking selectivo.
+          </li>
+          <li>
+            <strong><code>run_genetic_algorithm</code>:</strong> inicializa poblacion, aplica seleccion, cruce, mutacion
+            y elitismo; puede devolver historial completo para analisis.
+          </li>
+        </ul>
+      </article>
+
+      <article class="card">
+        <h2>4. Fitness y operadores (<code>ga/</code>)</h2>
+        <ul>
+          <li>
+            <strong>Fitness:</strong> `fitness_functions.py` define las funciones base y herramientas para combinarlas
+            con pesos.
+          </li>
+          <li>
+            <strong>Seleccion:</strong> `selection_operators.py` implementa torneo, ruleta, rank y SUS.
+          </li>
+          <li>
+            <strong>Cruce:</strong> `crossover_operators.py` mezcla diccionarios de parametros (single, two, k, uniform).
+          </li>
+          <li>
+            <strong>Mutacion:</strong> `mutation_operators.py` aplica ruido gaussiano proporcional al rango de cada
+            parametro y recorta valores.
+          </li>
+        </ul>
+      </article>
+
+      <article class="card">
+        <h2>5. Benchmark (<code>experiments/benchmark.py</code>)</h2>
+        <ol>
+          <li>Genera combinaciones segun la CLI y ejecuta el GA con semillas unicas.</li>
+          <li>Guarda imagenes finales opcionalmente y registra cada corrida.</li>
+          <li>Construye <code>ga_benchmark_runs.csv</code>, <code>ga_benchmark_summary.csv</code> y <code>ga_benchmark_history.csv</code>.</li>
+          <li>Produce boxplots, heatmaps y curvas de convergencia/diversidad.</li>
+          <li>Genera un reporte autogenerado con configuracion y rutas relevantes.</li>
+        </ol>
+      </article>
+
+      <article class="card">
+        <h2>6. Extensiones recomendadas</h2>
+        <ul>
+          <li>
+            <strong>Nuevas funciones de aptitud:</strong> añadelas a `fitness_functions.py`, registra el nombre en los
+            mapas y actualiza la CLI si deseas incluirlas en el benchmark.
+          </li>
+          <li>
+            <strong>Operadores personalizados:</strong> agrega la funcion en el modulo correspondiente y enlazala en los
+            diccionarios utilizados por `main.py` y el benchmark.
+          </li>
+          <li>
+            <strong>Transformaciones adicionales:</strong> ajusta `PARAM_BOUNDS` y `apply_transformation`, cuidando la
+            conversion final a `uint8`.
+          </li>
+          <li>
+            <strong>Depuracion rapida:</strong> usa pocas generaciones/poblacion o el benchmark con `--runs 1 --gens 2`
+            para reproducir problemas sin esperar el barrido completo.
+          </li>
+        </ul>
+      </article>
+    </main>
+
+    <footer>Visita rapida al codigo · Octubre 2025</footer>
+  </body>
+</html>

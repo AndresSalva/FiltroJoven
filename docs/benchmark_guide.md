@@ -24,8 +24,8 @@ ejecuta varias corridas independientes, registra métricas cuantitativas y gener
 
 3. **Directorio de resultados**: `benchmark_results/` se crea automáticamente y contiene:
    - `data/` – CSV con runs, resumen y series históricas.
-   - `figures/` – gráficas generadas (boxplot, heatmaps, convergencia, diversidad).
-   - `images/` (opcional) – capturas por corrida si usas `--save-images`.
+   - `figures/` – gráficas generadas (solo normalizadas CDF 0–1) y diversidad.
+   - `images/` (opcional) – capturas por corrida si usas `--save-images`, organizadas por subcarpeta de fitness.
    - `reports/benchmark_report.md` – reporte resumido en Markdown.
 
 ## 3. Parámetros clave del script
@@ -75,11 +75,11 @@ Cada tarea asigna `seed = base_seed + run_counter`. Esa semilla se inyecta en `r
    - `ga_benchmark_history.csv`: series por generación (`best_fitness`, `current_best`, `diversity`).
 
 6. **Gráficas y reporte**  
-   - `plot_boxplot`: distribución de mejores aptitudes por fitness y operador de selección.  
-   - `plot_heatmaps`: mapa de calor (mean best fitness) por fitness/selección/cruce.  
-   - `plot_convergence`: curvas de convergencia promedio con ±1 desviación estándar.  
-   - `plot_diversity`: curvas de diversidad poblacional promedio por generación.  
-   - `generate_report`: crea `benchmark_report.md` con resumen de configuración, tabla agregada y enlaces a figuras.
+   - `fitness_boxplot_cdf.png`: distribución de mejores aptitudes normalizadas (CDF 0–1) por fitness y selección.  
+   - `heatmap_<fitness>_cdf.png`: mapa de calor del promedio normalizado (CDF) por selección × cruce para cada fitness.  
+   - `convergence_<fitness>_cdf.png`: curvas de convergencia (CDF) con banda de ±1 desvío.  
+   - `diversity_<fitness>.png`: curvas de diversidad poblacional promedio por generación.  
+   - `generate_report`: crea `benchmark_report.md` con tablas normalizadas (CDF) y enlaces a figuras.
 
 ## 5. Ejecución del barrido completo
 
@@ -104,19 +104,21 @@ Para reproducir el barrido esperado (3 funciones de aptitud × 4 selecciones × 
    - `ga_benchmark_history.csv`: utiliza `generation`, `best_fitness`, `diversity` para análisis temporal.
 
 2. **Figuras** (`benchmark_results/figures/`):
-   - `convergence_*.png`: curvas de convergencia para el análisis solicitado en la rúbrica.
-   - `diversity_*.png`: responde al criterio de diversidad poblacional.
-   - `heatmap_*.png`, `fitness_boxplot.png`: facilitan comparativas entre combinaciones.
+   - `convergence_*_cdf.png`: curvas de convergencia normalizadas (0–1).
+   - `diversity_*.png`: diversidad poblacional por generación.
+   - `heatmap_*_cdf.png`, `fitness_boxplot_cdf.png`: comparativas entre combinaciones en escala 0–1.
 
 3. **Reporte** (`benchmark_results/reports/benchmark_report.md`):
    - Contiene tablas en Markdown con métricas agregadas y referencias a las figuras generadas.
 
 4. **Imágenes evolutivas** (`benchmark_results/images/` si `--save-images`):
-   - Cada archivo se nombra `fitness_selection_crossover_mutation_runX.png` para ubicar la configuración exacta.
+   - Subcarpetas por fitness (`/color`, `/ideal`, `/original`).
+   - Nombre `fitness_selection_crossover_mutation_runX.png` para ubicar la configuración exacta.
 
 ## 7. Recomendaciones adicionales
 
-- Ajusta `--calibration-samples` si introduces nuevas funciones de aptitud compuestas; esto controla la normalización `z-score`.
+- Normalización: el benchmark estima media y desvío por fitness vía muestreo aleatorio; transforma cada score a z y luego a **CDF 0–1** para todas las visualizaciones.
+- Ajusta `--calibration-samples` si introduces nuevas funciones de aptitud; más muestras → percentiles más estables.
 - Si usas otras imágenes (`--image`), considera agrupar resultados por carpeta para mantener ordenadas las salidas.
 - Para reproducibilidad exacta, documenta la combinación de argumentos y el `base_seed` utilizado.
 - Antes de cualquier entrega, confirma que:

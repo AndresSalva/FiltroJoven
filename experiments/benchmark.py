@@ -24,6 +24,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
+import math
 
 import cv2
 
@@ -210,6 +211,20 @@ def plot_boxplot(df: pd.DataFrame, output_dir: Path) -> Optional[Path]:
     plt.close()
     return path
 
+def plot_boxplot_norm(df: pd.DataFrame, output_dir: Path, field: str, suffix: str) -> Optional[Path]:
+    if df.empty or field not in df.columns or df[field].isna().all():
+        return None
+    plt.figure(figsize=(10, 6))
+    sns.boxplot(data=df, x="fitness_label", y=field, hue="selection")
+    plt.xticks(rotation=30, ha="right")
+    title = "Normalized (z)" if suffix == "z" else "Normalized (CDF 0–1)"
+    plt.title(f"Best Fitness Distribution per Fitness and Selection - {title}")
+    plt.tight_layout()
+    path = output_dir / f"fitness_boxplot_{suffix}.png"
+    plt.savefig(path, dpi=200)
+    plt.close()
+    return path
+
 
 def plot_heatmaps(df: pd.DataFrame, output_dir: Path) -> List[Path]:
     paths: List[Path] = []
@@ -223,6 +238,24 @@ def plot_heatmaps(df: pd.DataFrame, output_dir: Path) -> List[Path]:
         plt.title(f"Mean Best Fitness - {fitness_label}")
         plt.tight_layout()
         path = output_dir / f"heatmap_{fitness_label.replace(' ', '_')}.png"
+        plt.savefig(path, dpi=200)
+        plt.close()
+        paths.append(path)
+    return paths
+
+def plot_heatmaps_norm(df: pd.DataFrame, output_dir: Path, field: str, suffix: str) -> List[Path]:
+    paths: List[Path] = []
+    if df.empty or field not in df.columns or df[field].isna().all():
+        return paths
+    grouped = df.groupby(["fitness_label", "selection", "crossover"])[field].mean().reset_index()
+    for fitness_label, sub_df in grouped.groupby("fitness_label"):
+        pivot = sub_df.pivot(index="selection", columns="crossover", values=field)
+        plt.figure(figsize=(8, 5))
+        sns.heatmap(pivot, annot=True, fmt=".3f", cmap="viridis")
+        title = "Normalized (z)" if suffix == "z" else "Normalized (CDF 0–1)"
+        plt.title(f"Mean Best Fitness - {fitness_label} - {title}")
+        plt.tight_layout()
+        path = output_dir / f"heatmap_{fitness_label.replace(' ', '_')}_{suffix}.png"
         plt.savefig(path, dpi=200)
         plt.close()
         paths.append(path)
@@ -276,6 +309,50 @@ def plot_convergence(history_df: pd.DataFrame, output_dir: Path) -> List[Path]:
         plt.legend()
         plt.tight_layout()
         path = output_dir / f"convergence_{fitness_label.replace(' ', '_')}.png"
+        plt.savefig(path, dpi=200)
+        plt.close()
+        paths.append(path)
+    return paths
+
+def plot_convergence_normalized(history_df: pd.DataFrame, output_dir: Path, norm_stats: Mapping[str, Mapping[str, float]], mode: str = "z") -> List[Path]:
+    paths: List[Path] = []
+    if history_df.empty:
+        return paths
+    grouped = history_df.groupby(["fitness_label", "generation"])["best_fitness"].agg(["mean", "std"]).reset_index()
+    # Apply normalization per fitness_label using provided stats
+    def norm_row(row):
+        label = row["fitness_label"]
+        stats = norm_stats.get(label)
+        if not stats:
+            return pd.Series({"mean_n": np.nan, "std_n": np.nan})
+        mean = float(stats.get("mean", 0.0))
+        std = float(stats.get("std", 1.0)) or 1.0
+        z_mean = (row["mean"] - mean) / std
+        z_std = (row["std"] / std) if pd.notna(row["std"]) else np.nan
+        if mode == "z":
+            return pd.Series({"mean_n": z_mean, "std_n": z_std})
+        # CDF 0–1
+        cdf_mean = 0.5 * (1.0 + math.erf(z_mean / math.sqrt(2)))
+        cdf_std = (0.5 * (1.0 + math.erf((z_mean + (z_std if pd.notna(z_std) else 0.0)) / math.sqrt(2))) - cdf_mean) if pd.notna(z_std) else np.nan
+        return pd.Series({"mean_n": cdf_mean, "std_n": cdf_std})
+
+    norm = grouped.join(grouped.apply(norm_row, axis=1))
+    for fitness_label, sub_df in norm.groupby("fitness_label"):
+        plt.figure(figsize=(8, 5))
+        plt.plot(sub_df["generation"], sub_df["mean_n"], label="normalized mean best")
+        if "std_n" in sub_df and not sub_df["std_n"].isna().all():
+            y = sub_df["mean_n"]
+            s = sub_df["std_n"].fillna(0.0)
+            plt.fill_between(
+                sub_df["generation"], y - s, y + s, alpha=0.2, label="±1 std"
+            )
+        title = "Convergence (z)" if mode == "z" else "Convergence (CDF 0–1)"
+        plt.title(f"{title} - {fitness_label}")
+        plt.xlabel("Generation")
+        plt.ylabel("Normalized Best Fitness")
+        plt.legend()
+        plt.tight_layout()
+        path = output_dir / f"convergence_{fitness_label.replace(' ', '_')}_{mode}.png"
         plt.savefig(path, dpi=200)
         plt.close()
         paths.append(path)
@@ -346,6 +423,50 @@ def generate_report(
     label_summary = label_summary.rename(columns={"mean": "mean_fitness", "std": "std_fitness", "count": "runs"})
     top_summary = summary_df.sort_values(by="mean_fitness", ascending=False).head(10)
 
+    # Normalized leaderboards across fitness (if available)
+    norm_top_z = None
+    norm_top_cdf = None
+    if "mean_z" in summary_df.columns and not summary_df["mean_z"].isna().all():
+        norm_top_z = (
+            summary_df.sort_values(by="mean_z", ascending=False)
+            [["fitness_label", "selection", "crossover", "mutation", "mean_z", "std_z", "runs"]]
+            .head(10)
+        )
+    if "mean_cdf" in summary_df.columns and not summary_df["mean_cdf"].isna().all():
+        norm_top_cdf = (
+            summary_df.sort_values(by="mean_cdf", ascending=False)
+            [["fitness_label", "selection", "crossover", "mutation", "mean_cdf", "runs"]]
+            .head(10)
+        )
+    # Top 10 normalizado por etiqueta de fitness (z-score por fitness_label)
+    # Esto evita favoritismo debido a diferentes escalas entre funciones de fitness.
+    if not df.empty:
+        grp = df.groupby("fitness_label")["best_fitness"].agg(["mean", "std"]).reset_index()
+        stats_map = {}
+        for _, row in grp.iterrows():
+            mean_v = float(row["mean"]) if row["mean"] == row["mean"] else 0.0  # NaN check
+            std_v_raw = float(row["std"]) if row["std"] == row["std"] else 0.0
+            std_v = std_v_raw if std_v_raw not in (0.0, ) else 1.0
+            if not np.isfinite(std_v):
+                std_v = 1.0
+            stats_map[row["fitness_label"]] = {"mean": mean_v, "std": std_v}
+        df_norm = df.copy()
+        df_norm["best_fitness_norm"] = df_norm.apply(
+            lambda r: (r["best_fitness"] - stats_map[r["fitness_label"]]["mean"]) / stats_map[r["fitness_label"]]["std"],
+            axis=1,
+        )
+        top_summary = (
+            df_norm
+            .groupby(["fitness_label", "selection", "crossover", "mutation"])['best_fitness_norm']
+            .agg(["mean", "std", "count"])
+            .reset_index()
+            .rename(columns={"mean": "mean_fitness", "std": "std_fitness", "count": "runs"})
+            .sort_values(by="mean_fitness", ascending=False)
+            .head(10)
+        )
+    else:
+        top_summary = summary_df.head(0)
+
     lines = [
         "# GA Fitness Benchmark Report",
         "",
@@ -371,6 +492,20 @@ def generate_report(
             "",
             "## Convergence Overview",
             "Mean curves are computed across all runs for each fitness label. See the convergence figures for detailed trends.",
+        ])
+
+    if norm_top_z is not None and not norm_top_z.empty:
+        lines.extend([
+            "",
+            "## Top 10 (Normalized by z-score)",
+            markdown_table(norm_top_z),
+        ])
+
+    if norm_top_cdf is not None and not norm_top_cdf.empty:
+        lines.extend([
+            "",
+            "## Top 10 (Normalized 0–1 via CDF)",
+            markdown_table(norm_top_cdf),
         ])
 
     if figure_paths:
@@ -547,6 +682,37 @@ def main():
     runs_path = data_dir / "ga_benchmark_runs.csv"
     df.to_csv(runs_path, index=False)
 
+    # Calibration-based normalization across fitness labels (z-score and 0–1 CDF)
+    # Build stats for all single fitness labels present
+    try:
+        present_fitness_labels = sorted(df["fitness_key"].unique()) if not df.empty else []
+    except Exception:
+        present_fitness_labels = []
+    # Filter only base (single) functions existing in registry
+    base_labels = [k for k in present_fitness_labels if k in FITNESS_SPEC_REGISTRY and FITNESS_SPEC_REGISTRY[k]["type"] == "single"]
+    norm_stats = {}
+    if base_labels:
+        norm_stats = calibrate_stats(
+            img_bgr=image,
+            masks=masks,
+            base_names=base_labels,
+            samples=args.calibration_samples,
+            seed=args.base_seed + 5551,
+        )
+        means = {k: float(norm_stats[k]["mean"]) for k in base_labels}
+        stds = {k: (float(norm_stats[k]["std"]) if float(norm_stats[k]["std"]) != 0 else 1.0) for k in base_labels}
+        def compute_z(row):
+            key = row["fitness_key"]
+            if key in means:
+                return (row["best_fitness"] - means[key]) / (stds[key] if stds[key] != 0 else 1.0)
+            return np.nan
+        df["z_best"] = df.apply(compute_z, axis=1)
+        # 0–1 normalized via standard normal CDF of z
+        df["cdf_best"] = df["z_best"].apply(lambda z: 0.5 * (1.0 + math.erf(z / math.sqrt(2))) if pd.notna(z) else np.nan)
+    else:
+        df["z_best"] = np.nan
+        df["cdf_best"] = np.nan
+
     summary_df = (
         df.groupby(["fitness_label", "selection", "crossover", "mutation"])
         .agg(
@@ -555,6 +721,9 @@ def main():
             runs=("best_fitness", "count"),
             mean_final_diversity=("final_diversity", "mean"),
             std_final_diversity=("final_diversity", "std"),
+            mean_z=("z_best", "mean"),
+            std_z=("z_best", "std"),
+            mean_cdf=("cdf_best", "mean"),
         )
         .reset_index()
     )
@@ -566,11 +735,21 @@ def main():
     history_df.to_csv(history_path, index=False)
 
     figure_paths: List[Path] = []
-    boxplot_path = plot_boxplot(df, figures_dir)
-    if boxplot_path:
-        figure_paths.append(boxplot_path)
-    figure_paths.extend(plot_heatmaps(df, figures_dir))
-    figure_paths.extend(plot_convergence(history_df, figures_dir))
+    # Only normalized figures
+    path = plot_boxplot_norm(df, figures_dir, field="z_best", suffix="z")
+    if path:
+        figure_paths.append(path)
+    path = plot_boxplot_norm(df, figures_dir, field="cdf_best", suffix="cdf")
+    if path:
+        figure_paths.append(path)
+
+    figure_paths.extend(plot_heatmaps_norm(df, figures_dir, field="z_best", suffix="z"))
+    figure_paths.extend(plot_heatmaps_norm(df, figures_dir, field="cdf_best", suffix="cdf"))
+
+    # Normalized convergence if we have stats
+    if norm_stats:
+        figure_paths.extend(plot_convergence_normalized(history_df, figures_dir, norm_stats, mode="z"))
+        figure_paths.extend(plot_convergence_normalized(history_df, figures_dir, norm_stats, mode="cdf"))
     figure_paths.extend(plot_diversity(history_df, figures_dir))
 
     report_path = generate_report(

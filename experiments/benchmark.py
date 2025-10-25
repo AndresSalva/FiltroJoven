@@ -208,7 +208,7 @@ def plot_boxplot_norm(df: pd.DataFrame, output_dir: Path, field: str, suffix: st
     plt.figure(figsize=(10, 6))
     sns.boxplot(data=df, x="fitness_label", y=field, hue="selection")
     plt.xticks(rotation=30, ha="right")
-    title = "Normalized (CDF 0–1)" if suffix == "cdf" else "Normalized (z)"
+    title = "Normalized (CDF 0Ã¢â‚¬â€œ1)" if suffix == "cdf" else "Normalized (z)"
     plt.title(f"Best Fitness Distribution per Fitness and Selection - {title}")
     plt.tight_layout()
     path = output_dir / f"fitness_boxplot_{suffix}.png"
@@ -230,7 +230,7 @@ def plot_heatmaps_norm(df: pd.DataFrame, output_dir: Path, field: str, suffix: s
         pivot = sub_df.pivot(index="selection", columns="crossover", values=field)
         plt.figure(figsize=(8, 5))
         sns.heatmap(pivot, annot=True, fmt=".3f", cmap="viridis")
-        title = "Normalized (z)" if suffix == "z" else "Normalized (CDF 0–1)"
+        title = "Normalized (z)" if suffix == "z" else "Normalized (CDF 0Ã¢â‚¬â€œ1)"
         plt.title(f"Mean Best Fitness - {fitness_label} - {title}")
         plt.tight_layout()
         path = output_dir / f"heatmap_{fitness_label.replace(' ', '_')}_{suffix}.png"
@@ -279,7 +279,7 @@ def plot_convergence(history_df: pd.DataFrame, output_dir: Path) -> List[Path]:
             sub_df["mean"] - sub_df["std"],
             sub_df["mean"] + sub_df["std"],
             alpha=0.2,
-            label="±1 std",
+            label="Ã‚Â±1 std",
         )
         plt.title(f"Convergence Curve - {fitness_label}")
         plt.xlabel("Generation")
@@ -309,7 +309,7 @@ def plot_convergence_normalized(history_df: pd.DataFrame, output_dir: Path, norm
         z_std = (row["std"] / std) if pd.notna(row["std"]) else np.nan
         if mode == "z":
             return pd.Series({"mean_n": z_mean, "std_n": z_std})
-        # CDF 0–1
+        # CDF 0Ã¢â‚¬â€œ1
         cdf_mean = 0.5 * (1.0 + math.erf(z_mean / math.sqrt(2)))
         cdf_std = (0.5 * (1.0 + math.erf((z_mean + (z_std if pd.notna(z_std) else 0.0)) / math.sqrt(2))) - cdf_mean) if pd.notna(z_std) else np.nan
         return pd.Series({"mean_n": cdf_mean, "std_n": cdf_std})
@@ -322,9 +322,9 @@ def plot_convergence_normalized(history_df: pd.DataFrame, output_dir: Path, norm
             y = sub_df["mean_n"]
             s = sub_df["std_n"].fillna(0.0)
             plt.fill_between(
-                sub_df["generation"], y - s, y + s, alpha=0.2, label="±1 std"
+                sub_df["generation"], y - s, y + s, alpha=0.2, label="Ã‚Â±1 std"
             )
-        title = "Convergence (z)" if mode == "z" else "Convergence (CDF 0–1)"
+        title = "Convergence (z)" if mode == "z" else "Convergence (CDF 0Ã¢â‚¬â€œ1)"
         plt.title(f"{title} - {fitness_label}")
         plt.xlabel("Generation")
         plt.ylabel("Normalized Best Fitness")
@@ -335,6 +335,65 @@ def plot_convergence_normalized(history_df: pd.DataFrame, output_dir: Path, norm
         plt.close()
         paths.append(path)
     return paths
+
+def plot_convergence_all_normalized(history_df: pd.DataFrame, output_dir: Path, norm_stats: Mapping[str, Mapping[str, float]], mode: str = "cdf") -> Optional[Path]:
+    if history_df.empty or not norm_stats:
+        return None
+    grouped = history_df.groupby(["fitness_label", "generation"])["best_fitness"].agg(["mean", "std"]).reset_index()
+    # Normalize per label
+    def norm_row(row):
+        label = row["fitness_label"]
+        stats = norm_stats.get(label)
+        if not stats:
+            return pd.Series({"mean_n": np.nan, "std_n": np.nan})
+        mean = float(stats.get("mean", 0.0))
+        std = float(stats.get("std", 1.0)) or 1.0
+        z_mean = (row["mean"] - mean) / std
+        z_std = (row["std"] / std) if pd.notna(row["std"]) else np.nan
+        if mode == "z":
+            return pd.Series({"mean_n": z_mean, "std_n": z_std})
+        cdf_mean = 0.5 * (1.0 + math.erf(z_mean / math.sqrt(2)))
+        cdf_std = (0.5 * (1.0 + math.erf((z_mean + (z_std if pd.notna(z_std) else 0.0)) / math.sqrt(2))) - cdf_mean) if pd.notna(z_std) else np.nan
+        return pd.Series({"mean_n": cdf_mean, "std_n": cdf_std})
+
+    norm = grouped.join(grouped.apply(norm_row, axis=1))
+    plt.figure(figsize=(9, 5))
+    labels = []
+    for fitness_label, sub_df in norm.groupby("fitness_label"):
+        plt.plot(sub_df["generation"], sub_df["mean_n"], label=str(fitness_label))
+        labels.append(fitness_label)
+    title = "Convergence (CDF 0Ã¢â‚¬â€œ1) Ã¢â‚¬â€œ All Fitness"
+    if mode == "z":
+        title = "Convergence (z-score) Ã¢â‚¬â€œ All Fitness"
+    plt.title(title)
+    plt.xlabel("Generation")
+    plt.ylabel("Normalized Best Fitness" + (" (0Ã¢â‚¬â€œ1)" if mode != "z" else " (z)"))
+    plt.legend()
+    plt.tight_layout()
+    path = output_dir / f"convergence_all_{mode}.png"
+    plt.savefig(path, dpi=200)
+    plt.close()
+    return path
+
+def plot_diversity_all(history_df: pd.DataFrame, output_dir: Path) -> Optional[Path]:
+    if history_df.empty or "diversity" not in history_df.columns:
+        return None
+    df = history_df.dropna(subset=["diversity"]).copy()
+    if df.empty:
+        return None
+    grouped = df.groupby(["fitness_label", "generation"])["diversity"].mean().reset_index()
+    plt.figure(figsize=(9, 5))
+    for fitness_label, sub_df in grouped.groupby("fitness_label"):
+        plt.plot(sub_df["generation"], sub_df["diversity"], label=str(fitness_label))
+    plt.title("Population Diversity Ã¢â‚¬â€œ All Fitness")
+    plt.xlabel("Generation")
+    plt.ylabel("Mean std of parameters")
+    plt.legend()
+    plt.tight_layout()
+    path = output_dir / "diversity_all.png"
+    plt.savefig(path, dpi=200)
+    plt.close()
+    return path
 
 
 def plot_diversity(history_df: pd.DataFrame, output_dir: Path) -> List[Path]:
@@ -354,7 +413,7 @@ def plot_diversity(history_df: pd.DataFrame, output_dir: Path) -> List[Path]:
                 sub_df["mean"] - sub_df["std"],
                 sub_df["mean"] + sub_df["std"],
                 alpha=0.2,
-                label="±1 std",
+                label="Ã‚Â±1 std",
             )
         plt.title(f"Population Diversity - {fitness_label}")
         plt.xlabel("Generation")
@@ -467,7 +526,7 @@ def generate_report(
         "",
         markdown_table(label_summary),
         "",
-        "## Top 10 (Normalized 0–1 via CDF)",
+        "## Top 10 (Normalized 0Ã¢â‚¬â€œ1 via CDF)",
         "",
         markdown_table(top_summary),
     ]
@@ -476,7 +535,7 @@ def generate_report(
         lines.extend([
             "",
             "## Convergence Overview",
-            "Curves are normalized (0–1 CDF) per fitness. See figures for detailed trends.",
+            "Curves are normalized (0Ã¢â‚¬â€œ1 CDF) per fitness. See figures for detailed trends.",
         ])
     # We keep only the CDF leaderboard in the report for clarity
 
@@ -657,7 +716,7 @@ def main():
     runs_path = data_dir / "ga_benchmark_runs.csv"
     df.to_csv(runs_path, index=False)
 
-    # Calibration-based normalization across fitness labels (z-score and 0–1 CDF)
+    # Calibration-based normalization across fitness labels (z-score and 0Ã¢â‚¬â€œ1 CDF)
     # Build stats for all single fitness labels present
     try:
         present_fitness_labels = sorted(df["fitness_key"].unique()) if not df.empty else []
@@ -682,7 +741,7 @@ def main():
                 return (row["best_fitness"] - means[key]) / (stds[key] if stds[key] != 0 else 1.0)
             return np.nan
         df["z_best"] = df.apply(compute_z, axis=1)
-        # 0–1 normalized via standard normal CDF of z
+        # 0Ã¢â‚¬â€œ1 normalized via standard normal CDF of z
         df["cdf_best"] = df["z_best"].apply(lambda z: 0.5 * (1.0 + math.erf(z / math.sqrt(2))) if pd.notna(z) else np.nan)
     else:
         df["z_best"] = np.nan
@@ -710,7 +769,7 @@ def main():
     history_df.to_csv(history_path, index=False)
 
     figure_paths: List[Path] = []
-    # Only normalized figures (CDF 0–1)
+    # Only normalized figures (CDF 0Ã¢â‚¬â€œ1)
     path = plot_boxplot_norm(df, figures_dir, field="cdf_best", suffix="cdf")
     if path:
         figure_paths.append(path)
@@ -720,6 +779,9 @@ def main():
     # Normalized convergence (CDF) if we have stats
     if norm_stats:
         figure_paths.extend(plot_convergence_normalized(history_df, figures_dir, norm_stats, mode="cdf"))
+        path = plot_convergence_all_normalized(history_df, figures_dir, norm_stats, mode="cdf")
+        if path:
+            figure_paths.append(path)
     figure_paths.extend(plot_diversity(history_df, figures_dir))
 
     report_path = generate_report(

@@ -63,7 +63,7 @@ python -u experiments/benchmark.py --image tuto.jpg --runs 10 --gens 20 --pop 24
     --fitness original ideal color `
     --selection tournament roulette rank sus `
     --crossover single_point two_point k_point uniform `
-    --mutation gaussian --calibration-samples 40 --save-images --workers 8 `
+    --mutation gaussian --calibration-samples 40 --save-images `
     --output-dir benchmark_results
 ```
 El script imprime el avance y las rutas de los archivos generados.
@@ -96,11 +96,12 @@ benchmark_results_*/
 - `docs/code_overview.md`: recorrido del codigo y relaciones entre modulos.
 - `docs/benchmark_guide.md`: instrucciones detalladas para ejecutar y revisar el benchmark.
 - `docs/concepts_guide.md`: conceptos teoricos y practicos que respaldan el proyecto.
+- Las combinaciones preconfiguradas de fitness (`combo_original_ideal`, `combo_original_color`, `combo_ideal_color`, `combo_all`) pueden usarse desde CLI via `--fitness` igual que las funciones base. Cada combinacion se normaliza automaticamente antes de ponderarse.
 
 ## Buenas practicas
 
 - Ejecuta primero las pruebas rapidas (`runs` bajos) para validar instalaciones y rutas.
-- Ajusta `--workers` a la cantidad de nucleos fisicos disponibles.
+- El benchmark adapta la cantidad de hilos al numero de nucleos detectados; no es necesario ni posible ajustar `--workers` desde la CLI actual.
 - Documenta las semillas (`--seed` o `--base-seed`) al presentar resultados para garantizar reproducibilidad.
 - Si agregas nuevas funciones de aptitud o transformaciones, actualiza los diccionarios de registro en `experiments/benchmark.py` y las guias en `docs/`.
 

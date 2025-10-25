@@ -49,3 +49,5 @@ Usa menos generaciones o corridas mientras iteras; reserva la configuracion comp
 - Para documentar, combina este material con el informe principal (`docs/benchmark_assignment_report.md`) y la guia detallada (`docs/benchmark_details.md`).  
 - Si agregas nuevas funciones de aptitud u operadores, actualiza los registros en `experiments/benchmark.py` y vuelve a correr el benchmark completo.  
 - Al versionar, evita subir las imagenes generadas; el `.gitignore` ya excluye `benchmark_results_*/images/`.
+- Puedes usar las combinaciones de fitness (`combo_original_ideal`, `combo_original_color`, `combo_ideal_color`, `combo_all`) directamente en `--fitness`. El script normaliza y aplica los pesos definidos en `experiments/benchmark.py`.
+- `ThreadPoolExecutor` ajusta el numero de hilos a los nucleos detectados; no hay flag `--workers`. Controla la reproducibilidad con `--base-seed` (valor por defecto 1337).
